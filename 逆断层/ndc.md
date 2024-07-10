@@ -264,7 +264,10 @@ public class HalfCircleCheck {
     public static void main(String[] args) {
         Point2D.Double A = new Point2D.Double(0, 0);
         Point2D.Double B = new Point2D.Double(4, 0);
-        Point2D.Double directionVector = new Point2D.Double(0, 1); // 方向向量 (dx, dy)
+        Point2D.Double directionVector = new Point2D.Double(0, 1); 
+        // 方向向量 (dx, dy)待确定
+        //上盘任取连续两点 做中垂线交下盘 判断是否在某两个连续下盘点之间。
+        //在这四个点中，上下盘ge'qu
         
         List<Point2D.Double> points = new ArrayList<>();
         points.add(new Point2D.Double(2, 3));
