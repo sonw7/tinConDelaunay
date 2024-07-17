@@ -116,7 +116,7 @@ _________
 
 
 
-# 算法流程
+# 三、算法流程
 
 ## 计算方向**
 
@@ -228,7 +228,102 @@ public class HalfCirclePoints {
 
 请注意，这段代码假设方向向量从线段的起点出发，如果你有不同的方向向量定义，可能需要相应地调整代码。此外，对于位于半圆边缘的点，是否认为其在半圆内取决于具体要求，你可能需要调整 `>=` 到 `>` 来改变边界包含逻辑。
 
-### 版本二(new)
+## 3.1版本二(new)
+
+### a .方向向量取值
+
+方案一
+
+   上盘任意取两相邻点 取中垂线和下盘线段相交，相交的线段分别是下盘两连续离散点连接而成，再任选其一和刚刚上盘两点任选其一，作为方向向量。（这在之前的断层相交有写过）
+
+```java
+import java.awt.geom.Line2D;
+import java.awt.geom.Point2D;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+
+public class PerpendicularBisectorIntersection {
+
+    public static void main(String[] args) {
+        List<Point2D> pointSet1 = new ArrayList<>();
+        List<Point2D> pointSet2 = new ArrayList<>();
+
+        // Populate the point sets with example points
+        // Example points for pointSet1
+        pointSet1.add(new Point2D.Double(1, 1));
+        pointSet1.add(new Point2D.Double(3, 4));
+        pointSet1.add(new Point2D.Double(6, 1));
+
+        // Example points for pointSet2
+        pointSet2.add(new Point2D.Double(2, 2));
+        pointSet2.add(new Point2D.Double(5, 3));
+        pointSet2.add(new Point2D.Double(7, 5));
+
+        // Choose random consecutive points A and B from pointSet1
+        Random rand = new Random();
+        int index = rand.nextInt(pointSet1.size() - 1);
+        Point2D A = pointSet1.get(index);
+        Point2D B = pointSet1.get(index + 1);
+
+        System.out.println("Chosen points A: " + A + " and B: " + B);
+
+        // Calculate the perpendicular bisector of AB
+        Line2D bisector = calculatePerpendicularBisector(A, B);
+
+        // Check for intersection with line segments in pointSet2
+        for (int i = 0; i < pointSet2.size() - 1; i++) {
+            Point2D C = pointSet2.get(i);
+            Point2D D = pointSet2.get(i + 1);
+            Line2D segment = new Line2D.Double(C, D);
+
+            if (bisector.intersectsLine(segment)) {
+                System.out.println("Intersection found with segment: " + C + " - " + D);
+                // Return one of the vectors (BC, BD, AC, AD)
+                System.out.println("Vector BC: " + vectorToString(B, C));
+                System.out.println("Vector BD: " + vectorToString(B, D));
+                System.out.println("Vector AC: " + vectorToString(A, C));
+                System.out.println("Vector AD: " + vectorToString(A, D));
+                return; // Exit after finding the first intersection
+            }
+        }
+
+        System.out.println("No intersection found.");
+    }
+
+    private static Line2D calculatePerpendicularBisector(Point2D A, Point2D B) {
+        // Midpoint of AB
+        double midX = (A.getX() + B.getX()) / 2;
+        double midY = (A.getY() + B.getY()) / 2;
+
+        // Slope of AB
+        double dx = B.getX() - A.getX();
+        double dy = B.getY() - A.getY();
+
+        // Perpendicular slope
+        double perpendicularSlope = -dx / dy;
+
+        // Endpoints of the bisector line (arbitrarily chosen length of 10 units in each direction)
+        double length = 10;
+        double endX1 = midX + length / Math.sqrt(1 + perpendicularSlope * perpendicularSlope);
+        double endY1 = midY + perpendicularSlope * (endX1 - midX);
+        double endX2 = midX - length / Math.sqrt(1 + perpendicularSlope * perpendicularSlope);
+        double endY2 = midY + perpendicularSlope * (endX2 - midX);
+
+        return new Line2D.Double(endX1, endY1, endX2, endY2);
+    }
+
+    private static String vectorToString(Point2D from, Point2D to) {
+        return "[" + (to.getX() - from.getX()) + ", " + (to.getY() - from.getY()) + "]";
+    }
+}
+
+   
+```
+
+![image-20240716221705699](./assets/image-20240716221705699.png)
+
+### b.计算期望的离散点集合
 
 <img src="./assets/image-20240709202522567.png" alt="image-20240709202522567" style="zoom:50%;" />
 
@@ -366,7 +461,7 @@ public static List<Point2D.Double> getPointsInHalfCircle(Point2D.Double A, Point
 
 <img src="./assets/image-20240710163815567.png" alt="image-20240710163815567" style="zoom:33%;" />
 
-### 二维叉积
+#### 二维叉积的意义
 
 在二维平面中，两个向量的叉积（或称为外积、向量积）的符号有特定的几何意义。具体来说，给定两个向量 a 和 b，它们的叉积 a×b是一个标量，可以通过以下公式计算：
 
@@ -380,9 +475,88 @@ public static List<Point2D.Double> getPointsInHalfCircle(Point2D.Double A, Point
 2. **负值（小于零）**：如果 a×b<0，则 a 在 b 的顺时针方向，即从 a 顺时针旋转到 b 所经过的角度小于 180 度。这意味着 a 在 b 的右侧。
 3. **零**：如果 a×b=0，则 a 和 b 共线（即平行或反平行），可能是同方向或相反方向，也可能是零向量。
 
+## c.进一步排除在上盘下盘边界内的点
+
+目前来看，端点连接线和下盘边界 围成的区域内的点是需要排除的。
+
+<img src="./assets/image-20240715204057336.png" alt="image-20240715204057336" style="zoom:50%;" />
+
+在上一步所得的点集，再此继续计算，在下盘边界和半圆直径围成范围内的点。
+
+利用射线交叉法（奇偶规则）
+
+```java
+	import java.awt.geom.Path2D;
+import java.awt.geom.Point2D;
+import java.util.ArrayList;
+import java.util.List;
+
+public class PointInPolygon {
+
+    // 检查点是否在多边形内
+    public static boolean isPointInPolygon(Point2D point, List<Point2D> polygonPoints) {
+        Path2D polygon = new Path2D.Double();
+        if (polygonPoints.size() > 0) {
+            Point2D firstPoint = polygonPoints.get(0);
+            polygon.moveTo(firstPoint.getX(), firstPoint.getY());
+            for (int i = 1; i < polygonPoints.size(); i++) {
+                Point2D nextPoint = polygonPoints.get(i);
+                polygon.lineTo(nextPoint.getX(), nextPoint.getY());
+            }
+            polygon.closePath(); // Closes the path back to the first point
+        }
+        return polygon.contains(point.getX(), point.getY());
+    }
+
+    // 获取闭环内的所有点集 D 中的点
+    public static List<Point2D> getPointsInsideBoundary(List<Point2D> boundaryPoints, List<Point2D> pointsToCheck) {
+        List<Point2D> pointsInside = new ArrayList<>();
+        for (Point2D point : pointsToCheck) {
+            if (isPointInPolygon(point, boundaryPoints)) {
+                pointsInside.add(point);
+            }
+        }
+        return pointsInside;
+    }
+
+    public static void main(String[] args) {
+        // 构造闭环边界：点 A、B 和点集 C 的连线构成
+        List<Point2D> boundaryPoints = new ArrayList<>();
+        boundaryPoints.add(new Point2D.Double(1, 1)); // 点 A
+        boundaryPoints.add(new Point2D.Double(5, 1)); // 点 B
+        // 添加点集 C 的顺序点
+        boundaryPoints.add(new Point2D.Double(4, 3));
+        boundaryPoints.add(new Point2D.Double(6, 5));
+        boundaryPoints.add(new Point2D.Double(3, 6));
+        boundaryPoints.add(new Point2D.Double(1, 4));
+
+        // 已知的点集 D，包括在多边形外部和边缘上的点
+        List<Point2D> pointsToCheck = new ArrayList<>();
+        pointsToCheck.add(new Point2D.Double(3, 2)); // 在多边形内
+        pointsToCheck.add(new Point2D.Double(2, 2)); // 在多边形内
+        pointsToCheck.add(new Point2D.Double(6, 2)); // 在多边形外
+        pointsToCheck.add(new Point2D.Double(3, 4)); // 在多边形内
+        pointsToCheck.add(new Point2D.Double(7, 3)); // 在多边形外
+        pointsToCheck.add(new Point2D.Double(3, 1)); // 在多边形边缘
+        pointsToCheck.add(new Point2D.Double(5, 3)); // 在多边形外
+
+        // 从点集 D 中筛选位于闭环边界内的点
+        List<Point2D> pointsInsideBoundary = getPointsInsideBoundary(boundaryPoints, pointsToCheck);
+
+        // 输出结果
+        for (Point2D point : pointsInsideBoundary) {
+            System.out.println("Point inside: (" + point.getX() + ", " + point.getY() + ")");
+        }
+    }
+}
+
+```
+
 
 
 -----
+
+## ---
 
 
 
