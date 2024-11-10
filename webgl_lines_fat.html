@@ -1,0 +1,5623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="/rescue/webGL_js/three.min.js"></script>
+    <script src="/rescue/webGL_js/controls/FirstPersonControls.js"></script>
+    <script src="/rescue/webGL_js/controls/OrbitControls.js"></script>
+    <script src="/rescue/webGL_js/WebGL.js"></script>
+    <!--    <script src="/rescue/webGL_js/jquery-3.4.1.js"></script>-->
+    <!--    <script src="/rescue/webGL_js/libs/stats.min.js"></script>-->
+    <script src='/rescue/webGL_js/libs/dat.gui.min.js'></script>
+    <script src='/rescue/webGL_js/lines/LineSegmentsGeometry.js'></script>
+    <script src='/rescue/webGL_js/lines/LineGeometry.js'></script>
+    <script src='/rescue/webGL_js/lines/LineMaterial.js'></script>
+    <script src='/rescue/webGL_js/lines/LineSegments2.js'></script>
+    <script src='/rescue/webGL_js/lines/Line2.js'></script>
+    <script src="/rescue/webGL_js/Lut.js"></script>
+    <script src="/rescue/webGL_js/earcut.js"></script>
+    <script src="/rescue/webGL_js/libs/dat.gui.min.js"></script>
+    <script src="/rescue/webGL_js/controls/TrackballControls.js"></script>
+    <script src="/rescue/webGL_js/controls/DragControls.js"></script>
+    <script src="/rescue/webGL_js/loaders/OBJLoader.js"></script>
+    <script src="/rescue/webGL_js/web3DUtil.js"></script>
+
+    <style>
+        #webgl_container{
+            left: 0;
+            position: absolute;
+        }
+    </style>
+
+</head>
+
+<body style="margin: 0;">
+
+
+<div id="webgl_container" style="z-index:321; "></div>
+
+
+<script>
+
+    $("#rd_waiting_body").load("/rescue/command/waiting", "", function (responseTxt, statusTxt, xhr) {
+        if (statusTxt == "error")
+            alert("Error: " + xhr.status + ": " + xhr.statusText);
+    });
+    $("#rd_waiting_body").hide();
+    if ( WEBGL.isWebGLAvailable() === false ) {
+
+        document.body.appendChild( WEBGL.getWebGLErrorMessage() );
+
+    }
+
+    var wgl_renderer, wgl_scene, wgl_camera, wgl_controls;
+
+    var wgl_arrFaults = [];
+    var wgl_isFaultsVisable = [];
+    var wgl_faults;
+
+    var wgl_arrDrills = new Array();
+    var wgl_arrMatDrills = new Array();
+    var wgl_isDrillsVisable=new Array();
+
+    var wgl_drills;
+
+
+    var wgl_Tcdrills;
+    var wgl_arrTcDrills = new Array();
+
+    var wgl_arrLayerLocations =[];
+    var wgl_isLayerLocatoinsVisable=[];
+    var wgl_layerLocations;
+
+    var wgl_arrGolfs =[];
+    var wgl_isGolfsVisable=[];
+    var wgl_golfs;
+
+    var wgl_varLayerLocationUpShift;
+    var wgl_isLayerLocatoinsUpShiftVisable=false;
+    var wgl_layerLocationUpShift;
+
+    var wgl_varLayerLocationDownShift;
+    var wgl_isLayerLocatoinsDownShiftVisable=false;
+    var wgl_layerLocationDownShift;
+    var isActive = false;
+    let lineId = 0;
+    //3d点
+    let markers = []; // {1:[],2:[]}
+    //    距离文本
+    let textDoms = {};
+    //    2d屏幕点
+    let pointsDom = {};
+    let drawingLine = false;
+    //var stats;
+    //var gui;
+
+    var wgl_arrAdditionalPoints = new Array();
+    var wgl_arrAdditonalMatlines = new Array();
+    var wgl_arrAdditonallines = new Array();
+    var wgl_isarrAdditonallineVisable = false;
+    var wgl_isarrAdditonalPointsVisable = false;
+
+    // var aaa=[50,50,50];
+    // var bbb=[1,1,1];
+    // var ccc=[0,1];
+    // var testPoints = [];
+    // var testlines = [];
+    // testPoints[0]= aaa;
+    // testPoints[1] = bbb;
+    // testlines[0] = ccc;
+
+
+    var wgl_arrlines = new Array();
+    var wgl_arrMatlines = new Array();
+    var wgl_arrHuman = new Array();
+    var wgl_arrPersonnelLocationStation = new Array();
+    var wgl_arrHumanEvacPaths = new Array();
+    var wgl_humanLocationArray = new Array();
+    var wgl_arrPumpStation = new Array();
+    var wgl_arrGate = new Array();
+    var wgl_arrShelter = new Array();
+    var wgl_arrGoaf = new Array();
+    var wgl_arrWaterHeightStation = new Array();
+    var wgl_arrFlowStation = new Array();
+    var wgl_arrEvacPaths= new Array();
+
+    var wgl_worldtime = Date.now();
+    var wgl_waterhorizon = 0;
+    var wgl_clock = new THREE.Clock();
+
+    var wgl_xHorizon,wgl_yHorizon,wgl_zHorizon;
+    var wgl_minx,wgl_miny,wgl_minz;
+    var wgl_maxx,wgl_maxy,wgl_maxz;
+    var wgl_globle_scale = 100;
+    var wgl_isPersonnelLoationVisable = false;
+    var wgl_isHumanPositionVisable = false;
+    var wgl_isEvacPathVisable = true;
+    var wgl_isGoafVisable = false;
+    var wgl_isPumpStationVisable = false;
+    var wgl_isGateVisable = false;
+    var wgl_isShelterVisable = false;
+    var wgl_isLineWaterHeightVisable = true;
+    var wgl_isLineFlowVisable = false;
+    var wgl_isWaterHeightStationVisable = false;
+    var wgl_isFlowStationVisable = false;
+
+    var wgl_arrStratumLayers = new Array();
+    var wgl_arrProfiles = {};
+    var wgl_roadway_mesh;
+    var wgl_RenderingMode = 1;
+    var wgl_isChangeRenderingMode = true;
+    var wgl_isStratumLayersVisable = [];
+    var wgl_isProfilesVisable = {};
+    var wgl_LayersYHorizon,wgl_Roadway3DYHorizon;
+    var wgl_roadway3d;
+    var wgl_layers;
+    var wgl_profiles = {};
+    //存储地质剖面是否已经加载数据
+    var wgl_profilesLoad = {};
+    var wgl_roadwaysRendering = [];
+    var wgl_lut;
+    var wgl_params = ['bluered','viridis', 'cool', 'rainbow','cooltowarm','blackbody', 'earth' ];
+    var wgl_orthoCamera;
+    var wgl_uiScene;
+    var wgl_vertexToSegement = [];
+
+    var humanPosition = [];
+    var evacPath = [];
+    var lineWaterHeights = [];
+    var humanLocationFlag = false;
+    var lineFlows = [];
+    var goaf = new Array(1);
+
+    var webgl_width = mapWidth;
+    var webgl_height = mapHeight;
+
+    var wgl_arrMicroSeismic = new Array();
+    var wgl_isMicroSeismicVisable = true;
+    var wgl_microseismic = null;
+    var wgl_microseismic_init = false;
+
+    var wgl_mineShowed={};
+
+    var wgl_arrSegShow = new Array();
+
+    var wgl_mine_color_data = 1;
+    var wgl_mine_color_max = 1;
+    var wgl_mine_color_min = 1;
+
+    var wgl_roadwaymode = 1;//0:2d,1:3d
+    // var wgl_zScale = 5.0 ;
+    var wgl_zScale = 1.0 ;
+    var wgl_arrHumans_color = []; // color = {"r":rgb[0]/255.0,"g":rgb[1]/255.0,"b":rgb[2]/255.0};
+    // var wgl_zScale = 2.5 ;
+
+    var arrDrills = new Array();//记录钻孔数据
+    //var points1 = new Array();
+    var drills;//接收后台传入的钻孔数据
+    let drillsname=[];//记录钻孔名
+    let colorcount=0;
+    let localPlane = new THREE.Plane( new THREE.Vector3( 0.5, 0, -0.5 ), 0.8 );
+    let globalPlane = new THREE.Plane( new THREE.Vector3( -0.5, 0, 0.5 ), 0.3 );
+    let planes = [localPlane,globalPlane];
+    const loader = new THREE.FontLoader();
+    var wgl_isGeoDrillsVisible = [];
+
+    var mousepickEnable = false;
+    var zxcube1 ,zxcube2;
+    const zxobjects = [];
+    const mouse = new THREE.Vector2(), raycaster = new THREE.Raycaster();
+    let pickPointFlag = 0;
+    let verdistance;
+    var objects = new Array();
+    let cheight = [];
+    let cocolor = new Array();
+    let minh=0,maxh=0;//最小高度，最大高度，间隔高度
+    let colorChange = {
+        rgbToHex: function (val) {  //RGB(A)颜色转换为HEX十六进制的颜色值
+            let r, g, b, a,
+                regRgba = /rgba?\((\d{1,3}),(\d{1,3}),(\d{1,3})(,([.\d]+))?\)/,    //判断rgb颜色值格式的正则表达式，如rgba(255,20,10,.54)
+                rsa = val.replace(/\s+/g, '').match(regRgba);
+            if (!!rsa) {
+                r = parseInt(rsa[1]).toString(16);
+                r = r.length == 1 ? '0' + r : r;
+                g = (+rsa[2]).toString(16);
+                g = g.length == 1 ? '0' + g : g;
+                b = (+rsa[3]).toString(16);
+                b = b.length == 1 ? '0' + b : b;
+                a = (+(rsa[5] ? rsa[5] : 1)) * 100;
+                return { hex: '#' + r + g + b, r: parseInt(r, 16), g: parseInt(g, 16), b: parseInt(b, 16), alpha: Math.ceil(a) };
+            } else {
+                return { hex: '无效', alpha: 100 };
+            }
+        },
+        hexToRgb: function (val) {   //HEX十六进制颜色值转换为RGB(A)颜色值
+            let i;
+// 16进制颜色值的正则
+            let reg = /^#([0-9a-fA-f]{3}|[0-9a-fA-f]{6})$/;
+            // 把颜色值变成小写
+            let color = val.toLowerCase();
+
+            let result = '';
+            if (reg.test(color)) {
+                // 如果只有三位的值，需变成六位，如：#fff => #ffffff
+                if (color.length === 4) {
+                    let colorNew = "#";
+                    for (i = 1; i < 4; i += 1) {
+                        colorNew += color.slice(i, i + 1).concat(color.slice(i, i + 1));
+                    }
+                    color = colorNew;
+                }
+                // 处理六位的颜色值，转为RGB
+                const colorChange = [];
+                for (i = 1; i < 7; i += 2) {
+                    colorChange.push(parseInt("0x" + color.slice(i, i + 2)));
+                }
+                result = "rgb(" + colorChange.join(",") + ")";
+                return { rgb: result, r: colorChange[0], g: colorChange[1], b: colorChange[2] };
+            } else {
+                result = '无效';
+                return { rgb: result };
+            }
+
+        }
+    };
+    var wgl_cjjTuli;
+    var wgl_cjjTuliVisible = true;
+    var wgl_clipCubeVisible = false;
+    var wgl_layers_clip;
+    var wgl_currentControl = 0; //0 orbitControl 1  fisrtControl
+    var wgl_gridMesh = new Array();
+    var wgl_gridMeshVisible = false;
+    var wgl_qiemianMesh = new Array() ;
+    var wgl_qiemianMeshVisible = false;
+    var objectsVisible = false;
+    var wgl_dem;
+    var wgl_isDemVisable = false;
+    var plight;
+    let directLight,directLight1;
+
+    var wgl_CQTDrills;
+    var wgl_arrCQTDrills =  new Array();
+    var wgl_isCQTDrillsVisable = true;
+
+    wgl_init();
+    wgl_animate();
+
+    function wgl_init() {
+
+        wgl_renderer = new THREE.WebGLRenderer({antialias: true});
+        wgl_renderer.setPixelRatio(window.devicePixelRatio);
+        wgl_renderer.setClearColor(0x000000, 0);
+        wgl_renderer.setSize(webgl_width, webgl_height);
+        wgl_renderer.autoClear = false;
+        // wgl_renderer.setSize(500,500);
+        // document.body.appendChild(wgl_renderer.domElement);
+        var box=document.getElementById("webgl_container");
+        box.appendChild( wgl_renderer.domElement );
+        console.log(box);
+        wgl_uiScene = new THREE.Scene();
+        wgl_scene = new THREE.Scene();
+
+        var wgl_min = 0;
+        var wgl_max = 1.5;
+        webgl_initColorBar(wgl_uiScene, wgl_params[0], wgl_min,wgl_max);
+        wgl_camera = new THREE.PerspectiveCamera(75, webgl_width / webgl_height, 0.001, 5000);
+        // wgl_camera = new THREE.PerspectiveCamera(40, 500 / 500, 1, 1000);
+
+        var cgeometry1 = new THREE.BoxGeometry(0.05, 0.05, 0.05);
+        var cgeometry2 = new THREE.BoxGeometry(0.05, 0.05, 0.05);
+        var cmaterial1 = new THREE.MeshPhongMaterial({ // Required For Shadows
+            color: 0x00FFFF,
+        });
+        var cmaterial2= new THREE.MeshPhongMaterial({ // Required For Shadows
+            color: 0x00FF00,
+        });
+        zxcube1 = new THREE.Mesh(cgeometry1, cmaterial1);
+
+        zxcube2 = new THREE.Mesh(cgeometry2, cmaterial2);
+
+        wgl_scene.add(zxcube1);
+        wgl_scene.add(zxcube2);
+        zxobjects.push(zxcube1);
+        zxobjects.push(zxcube2);
+        wgl_camera.position.x =-16;
+        wgl_camera.position.y =100;
+        wgl_camera.position.z =-20 ;
+
+        wgl_orthoCamera = new THREE.OrthographicCamera( - 1, 1, 1, - 1, 1, 2 );
+        wgl_orthoCamera.position.set( 0.5, 0, 1 );
+        wgl_controls = new THREE.OrbitControls(wgl_camera, wgl_renderer.domElement);
+        wgl_controls.minDistance = 1;
+        wgl_controls.maxDistance = 500;
+        wgl_controls.target = new THREE.Vector3(0, 0, 0);
+
+        // wgl_controls.lookAt(0,0,0);
+
+        // Lights  point light
+        //绑定相机
+        plight = new THREE.PointLight(0xffffff,1);
+        plight.position.set(-13, 150, 10);
+        wgl_scene.add(plight);
+
+
+        // let planeHelpers = planes.map( p => new THREE.PlaneHelper( p, 2, 0xffffff ) );
+        // planeHelpers.forEach( ph => {
+        //
+        //     ph.visible = true;
+        //     wgl_scene.add( ph );
+        //
+        // } );
+
+        // Ambient light for general illumination
+        var ambientLight = new THREE.AmbientLight(0x404040);
+        //ambientLight.position.set(100, 100, 200);
+        wgl_scene.add(ambientLight);
+        wgl_uiScene.add( ambientLight.clone() );
+
+        directLight = new THREE.DirectionalLight(0xffffff,0.5);
+        // directLight.position.x=-28;
+        // directLight.position.y= 400;
+        // directLight.position.z= 66;
+        directLight.position.x=100;
+        directLight.position.y= -150;
+        directLight.position.z= -100;
+        wgl_scene.add(directLight);
+        //const helper = new THREE.DirectionalLightHelper( directLight, 5 );
+        // wgl_scene.add( helper );
+
+        directLight1 = new THREE.DirectionalLight(0xffffff,0.5);
+
+        directLight1.position.x=200;
+        directLight1.position.y= -10;
+        directLight1.position.z= 90;
+        wgl_scene.add(directLight1);
+        //const helper1 = new THREE.DirectionalLightHelper( directLight1, 5 );
+        // wgl_scene.add( helper1 );
+        // const smallBall = new THREE.Mesh(
+        //     new THREE.SphereBufferGeometry(1,20,20),
+        //     new THREE.MeshBasicMaterial({color:0xff0000})
+        // )
+
+        let pointlight = new THREE.PointLight(0xffffff,0.5,100)
+        pointlight.position.set(0,-100,100)
+        //wgl_scene.add(pointlight);
+
+        //smallBall.add(directLight)
+        //wgl_scene.add(smallBall);
+        //辅助测试直线光
+        let gui =new dat.GUI();
+        gui.add(directLight.position,"x").min(-300).max(300).step(10);
+        gui.add(directLight.position,"z").min(-300).max(300).step(10);
+        gui.add(directLight.position,"y").min(-300).max(300).step(10);
+
+        //测距的gui
+        //GUI(gui);
+
+        // gui.add(directLight.position,"y").min(-300).max(100).step(10);
+        //
+        // gui.add(directLight.position,"z").min(-500).max(300).step(10);
+        //
+        // gui.add(directLight,"intensity").min(0.1).max(7).step(1);
+
+        //initXYZHorizon
+        // console.log(shpInfo["wfs030101"].data);
+        // getRoadwayXYZHorizon(shpInfo["wfs030101"].data.vPoints);
+
+        // wgl_load_3D_golfs();
+
+        // console.log(wgl_golfs);
+
+        // initGoafMeshComplex(wgl_golfs);
+
+        // setGoafsVisible();
+        // goaf = shpInfo["wfs0301021"].data;
+        // for(let i in goaf)
+        // {
+        //     // var yy = (wgl_mpoints[0][2]-wgl_minz) / wgl_globle_scale;
+        //     // var yy = (goaf[i][8])/wgl_globle_scale;
+        //     var yy = (goaf[i][9])/wgl_globle_scale;
+        //     // var yy = 2.0;
+        //     initGoaf(goaf[i], 0,yy,0, i);
+        // }
+
+        // for(let i=0; i<shpInfo["wfs030101"].data.vLines.length;++i)
+        // {
+        //     wgl_arrSegShow.push(0);
+        // }
+        //巷道
+        if(wgl_roadwaymode === 1)
+        {
+            wgl_load_roadway_mapping();
+            // wgl_load_3D_roadway();
+            // wgl_Roadway3DYHorizon = webgl_getRoadway3DYHorizon(wgl_roadway3d);
+            // webgl_loadRoadway(wgl_roadway3d);
+
+            getroadobj();
+            //
+            getRoadwayXYZHorizon(shpInfo["wfs030101"].data.vPoints);
+            initRoadway();
+            // wgl_Roadway3DYHorizon = webgl_getRoadway3DYHorizon(wgl_roadway3d);
+        }else{
+            initRoadway();
+        }
+
+
+        wgl_load_3D_layers();//请求地层数据
+        wgl_LayersYHorizon = getLayersYHorizon(wgl_layers);//获取Y值区间
+        loadStratumLayer(wgl_layers);
+
+        wgl_load_3D_LayerLocation();//不一样 但不太清楚
+        wgl_LayersYHorizon = getLayersYHorizon(wgl_layerLocations);
+        loadLayerLocation(wgl_layerLocations);
+
+        //  (wgl_layerLocations[0].name);
+
+        // var tn ="奥灰顶面";
+        // setLayerLocationUpShift(tn,-30);
+        // setLayerLocationDownShiftVisible(tn,-35);
+        // setLayerLocationDownShiftVisible(tn,-35);
+        // setLayerLocationDownShiftVisible(tn,-305);
+
+        wgl_load_3D_faluts();
+
+        // wgl_LayersYHorizon = getLayersYHorizon(wgl_faults);
+
+        loadFaults(wgl_faults);//加载断层   
+
+        // initAdditionalRoadway(testPoints,testlines);
+        // initAdditionalPoints(testPoints);
+        //initMicroSemicF(wgl_microseismic);
+
+
+        //wgl_scene.add( new THREE.AxesHelper( 20 ) );
+
+        const geometry = new THREE.SphereGeometry( 15, 32, 16 );
+        const material = new THREE.MeshBasicMaterial( { color: 0xffff00 } );
+        const sphere = new THREE.Mesh( geometry, material );
+        //wgl_scene.add( sphere );
+        getdrillsVertices();//钻孔数据获取
+        const raycaster = new THREE.Raycaster();        
+        const mouse = new THREE.Vector2();
+        let intersects;
+        wgl_renderer.domElement.addEventListener('click', onClick, false);
+        document.addEventListener('mousemove', onDocumentMouseMove, false)
+        //rangeFinding();
+        //钻孔数据渲染
+        for(let m0=0;m0<drills.length;m0++){
+            let name = drills[m0].name;
+            drillsname.push(drills[m0].name);
+            arrDrills[name] = new Array();
+            for(let m1=0;m1<drills[m0].xyz.length-1;m1++){
+
+                if(drills[m0].xyz[m1]!=99.99&&drills[m0].xyz[m1+1]!=99.99){
+
+                    var hou = drills[m0].xyz[m1]-drills[m0].xyz[m1+1];
+                    if(hou==0)
+                        continue;
+                    var zkz = drills[m0].xyz[m1+1]+hou/2;
+                    huazk(drills[m0].zkx,zkz,drills[m0].zky,hou,getcolorbylayer(m1),name,m1);
+                }
+                wgl_isGeoDrillsVisible.push(false);
+            }
+
+        }
+        zbz(-80,35,-20,5,0);
+
+        zuobiaozhou(-50 ,-50,-8,70,30,4);
+
+        // const axesHelper = new THREE.AxesHelper( 200 );
+        // wgl_scene.add( axesHelper );
+
+        // tuli(0,0,-20);
+
+        wgl_load_3D_drills();
+        // console.log(wgl_drills);
+        initDrills(wgl_drills);
+
+        getobjmtl();
+        // wgl_drillCheck(tn,-30,-500);
+        // console.log(wgl_drills[0].name);
+        // console.log(wgl_arrDrills);
+        // setDrillsVisible(wgl_drills[0].name);
+        // deleteDrill( wgl_drills[0].name );
+
+        wgl_load_3D_layers_clips();//请求函数 不清楚
+        initLayersClips(wgl_layers_clip,false,objects);//这是什么数据
+
+
+
+
+        window.addEventListener( 'resize', onWindowResize, false );
+        onWindowResize();
+
+        const globalPlanes = [ globalPlane ],Empty = Object.freeze( [] );
+        wgl_renderer.clippingPlanes = Empty; // GUI sets it to globalPlanes
+        wgl_renderer.localClippingEnabled = false;
+
+    }
+    addClick();
+    function initLayersClipsArray(wgl_layers_clip_array,flag,objects)
+    {
+        for(let i = 0;i < wgl_layers_clip_array.length;++i)
+        {
+            console.log(wgl_layers_clip_array[i]);
+            initLayersClips(wgl_layers_clip_array[i],flag,objects);
+        }
+    }
+
+    function initLayersClips(wgl_layers_clip,flag,objects)
+    {
+        let geometries = [];
+        // let objects = [];
+        let materials = [];
+        let materials7 = [];
+        let colors = new Array();
+        let colorsnum = new Array();
+        let size = 0;
+        if(objects!=null)
+            size = objects.length;
+        for (let i = 0; i < wgl_layers_clip.length; ++i) {
+            geometries[i] = new THREE.BufferGeometry();
+            colors[i]=new  Array();
+            colorsnum[i]=new  Array();
+            colorsnum[i].push(colorChange.hexToRgb(getcolorbylayer(i,1)).r/256,colorChange.hexToRgb(getcolorbylayer(i,1)).g/256,colorChange.hexToRgb(getcolorbylayer(i,1)).b/256)
+
+
+            for (let t=0 ; t < wgl_layers_clip[i].vertices.length/3 ; t++ ){
+                let color = new THREE.Color();
+                color.setRGB(colorsnum[i][0],colorsnum[i][1],colorsnum[i][2]);
+                colors[i].push(color.r, color.g, color.b);
+                //colors[i].push((( i * segmentSize ) - halfSize)/size,(( i * segmentSize ) - halfSize)/size+0.5,i/10+1);
+                //colors[i].push(((( i * segmentSize ) - halfSize)/size+0.5)/2,(( i * segmentSize/2 ) - halfSize)/size+0.5,1);
+                //colors[i].push(colorsnum[i][0],colorsnum[i][1],colorsnum[i][2])
+            }
+
+
+            geometries[i].setIndex(wgl_layers_clip[i].indices);
+            geometries[i].addAttribute('position', new THREE.Float32BufferAttribute(wgl_layers_clip[i].vertices, 3));
+            geometries[i].addAttribute('normal', new THREE.Float32BufferAttribute(wgl_layers_clip[i].normals, 3));
+            //新加
+            geometries[i].addAttribute( 'color', new THREE.Float32BufferAttribute( colors[i], 3 ) );
+            //colors=null;
+
+            // geometries[i].addAttribute('position',new THREE.Float32BufferAttribute( wgl_layers[i].vertices , 3 ));
+            // geometries[i].addAttribute('normal',new THREE.Float32BufferAttribute( wgl_layers[i].normals , 3 ));
+            materials[i] = new THREE.MeshPhongMaterial({
+                color: getcolorbylayer(i),//传回去改色
+                //color:colors[i],
+                shininess: 100,
+                side: THREE.DoubleSide,
+
+                // ***** Clipping setup (material): *****
+                clippingPlanes: [localPlane],
+                clipShadows: true
+            });
+            materials7[i] = new THREE.MeshPhongMaterial( {
+                side: THREE.DoubleSide,
+                //shininess: 30,
+                vertexColors: true,// 使用顶点着色
+                //clippingPlanes: [localPlane],
+                //clipShadows: true
+            } );
+            let index = i+size;
+            objects[index] = new THREE.Mesh(geometries[i], materials7[i]);
+            objects[index].castShadow = true;
+            objects[index].renderOrder = 100 - i;
+            objects[index].visible = flag;
+            wgl_scene.add(objects[index]);
+
+        }
+    }
+
+    function wgl_load_3D_layers_clips() {
+        $.ajax({
+            type: "POST",
+            url: "/get_3D_Toplayers",
+            async: false,
+            contentType: "application/json; charset=utf-8",
+            success: function (da) {
+                wgl_layers_clip = da;
+
+                // console.log(wgl_layers_clip);
+                /* loadStratumLayer( wgl_layers);*/
+            }
+        })
+    }
+
+    function zbz(x,y,z,textsize,jiaodu){
+
+        loader.load( '../../rescue/fonts/helvetiker_regular.typeface.json', function ( font ) {
+
+            const geometrytext = new THREE.TextGeometry( "N", {
+                font: font,
+                size: textsize,
+                height: textsize/2,
+            } );
+            let materialstext1 = [
+                new THREE.MeshPhongMaterial( { color: 0x0000ff, flatShading: true } ), // front
+                new THREE.MeshPhongMaterial( { color: 0xff0000 } ) // side
+            ];
+            let textMesh = new THREE.Mesh(geometrytext, materialstext1);
+
+            textMesh.position.set(y, z+15, x)
+            textMesh.updateMatrix();//更新位置
+            textMesh.matrixAutoUpdate=false;//禁止矩阵变动
+            // textMesh.rotation.y = -1.1
+            // 网格对象添加到场景中
+            wgl_scene.add(textMesh)
+        } );
+
+
+        const geometry = new THREE.ConeGeometry( 5, 20, 3 );
+        const material = new THREE.MeshBasicMaterial( {color: 0xffff00} );
+        const cone = new THREE.Mesh( geometry, material );
+        cone.position.x=y;
+        cone.position.y=z;
+        cone.position.z=x;
+        cone.rotation.x=-Math.PI/2;
+        cone.rotation.z=jiaodu
+        cone.updateMatrix();
+        cone.matrixAutoUpdate = false;
+        wgl_scene.add( cone );
+        // console.log(cone )
+
+    }
+    function textChinese(text,x,y,z,size,rotationx,rotationy,rotationz){
+        loader.load( "../../rescue/fonts/FZYaoTi_Regular.json", function ( font ) {
+
+            const geometrytext = new THREE.TextGeometry( text, {
+                font: font,
+                size: size,
+                height: size/2,
+                // curveSegments: 4,
+                // bevelEnabled: true,
+                // bevelThickness: 2,
+                // bevelSize: 1.5,
+                // bevelOffset: 0,
+                // bevelSegments: 4
+            } );
+            let materialstext1 = [
+                new THREE.MeshPhongMaterial( { color: 0xffffff, flatShading: true } ), // front
+                new THREE.MeshPhongMaterial( { color: 0xffffff } ) // side
+            ];
+            let textMesh = new THREE.Mesh(geometrytext, materialstext1);
+
+            textMesh.position.set(y, z, x)
+            textMesh.rotation.x=rotationy;
+            textMesh.rotation.y=rotationz;
+            textMesh.rotation.z=rotationx;
+            textMesh.updateMatrix();//更新位置
+            textMesh.matrixAutoUpdate=false;//禁止矩阵变动
+            // textMesh.rotation.y = -1.1
+            // 网格对象添加到场景中
+            wgl_scene.add(textMesh)
+
+
+        } );
+    }
+    function chidu(xmin,ymin,zmin,xmax,ymax,zmax){
+        // let size = 300;//大小
+        // let divisions = 10;//
+
+        // var gridHelper = new THREE.GridHelper(size, divisions, 0x1231c3, 0x135133);
+        // this.scene.add(gridHelper);
+
+        let geometry0 = new THREE.Geometry(); //创建geometry,x轴    x(y) y(z) z(x)
+        geometry0.vertices.push(new THREE.Vector3(ymin, zmin, xmin)); //添加顶点
+        geometry0.vertices.push(new THREE.Vector3(ymin, zmin, xmax));
+
+        for (let i = 0, len = zmax-zmin; i <= len; i++) {
+            //xz面 往z移动 赋值y
+            if(i%2==0) {
+                let line0 = new THREE.Line(geometry0, new THREE.LineBasicMaterial( {
+                    // vertexColors: true,
+                    // toneMapped: false,
+                    color:0x808080
+                } )); //利用geometry和material创建line
+                line0.position.y = i  ; //设置line的位置
+                line0.updateMatrix();//更新位置
+                line0.matrixAutoUpdate=false;
+                wgl_scene.add(line0); //将line添加到场景中
+            }
+            let number = i+zmin;
+            let rnum=number*100;
+            let stringType = rnum.toString()
+            //z轴尺度
+
+            if(i%2==0) {
+                textChinese(stringType.toString(), xmax + 4, ymin, number, 1, 0, 0, Math.PI / 2);
+            }
+
+        }
+        for (let iy = 0, len = (ymax-ymin) / 10; iy <= len; iy++) {
+            //xy面 往y移动 赋值x
+            let line1 = new THREE.Line(geometry0, new THREE.LineBasicMaterial( {
+                // vertexColors: true,
+                // toneMapped: false,
+                color:0x808080
+            } )); //利用geometry和material创建line
+            line1.position.x = iy * 10 ; //设置line的位置
+            line1.updateMatrix();//更新位置
+            line1.matrixAutoUpdate=false;
+            wgl_scene.add(line1); //将line添加到场景中
+            let number = iy * 10+ymin;
+            let rnum=(number+Math.abs(ymin))*100;
+            let stringType = rnum.toString();
+
+            if(iy!=0) {
+                textChinese(stringType.toString(), xmin, number, zmax + 3, 2, 0, 0, 0);
+            }
+        }
+        let geometry1 = new THREE.Geometry(); //创建geometry,z轴面    x(y) y(z) z(x)
+        geometry1.vertices.push(new THREE.Vector3(ymin, zmin, xmin)); //添加顶点
+        geometry1.vertices.push(new THREE.Vector3(ymin, zmax, xmin));
+        for (let m = 0, len = (xmax-xmin) / 10; m <= len; m++) {
+            //xz面 往x移动  赋值z
+            let line0 = new THREE.Line(geometry1, new THREE.LineBasicMaterial( {
+                // vertexColors: true,
+                // toneMapped: false,
+                color:0x808080
+            } )); //利用geometry和material创建line
+            line0.position.z = m * 10 ; //设置line的位置
+            line0.updateMatrix();//更新位置
+            line0.matrixAutoUpdate=false;
+            wgl_scene.add(line0); //将line添加到场景中
+        }
+        for (let m0 = 0, len = (ymax-ymin) / 10; m0 <= len; m0++) {
+            //yz面 往y移动 赋值x
+            let line1 = new THREE.Line(geometry1, new THREE.LineBasicMaterial( {
+                // vertexColors: true,
+                // toneMapped: false,
+                color:0x808080
+            } )); //利用geometry和material创建line
+            line1.position.x = m0 * 10 ; //设置line的位置
+            line1.updateMatrix();//更新位置
+            line1.matrixAutoUpdate=false;
+            wgl_scene.add(line1); //将line添加到场景中
+        }
+        let geometry2 = new THREE.Geometry(); //创建geometry,y轴面    x(y) y(z) z(x)
+        geometry2.vertices.push(new THREE.Vector3(ymin, zmin, xmin)); //添加顶点
+        geometry2.vertices.push(new THREE.Vector3(ymax, zmin, xmin));
+        for (let n = 0, len = zmax-zmin ; n <= len; n++) {
+            //yz面 往z移动  赋值y
+            if(n%2==0) {
+                let line0 = new THREE.Line(geometry2, new THREE.LineBasicMaterial( {
+                    // vertexColors: true,
+                    // toneMapped: false,
+                    color:0x808080
+                } )); //利用geometry和material创建line
+                line0.position.y = n; //设置line的位置
+                line0.updateMatrix();//更新位置
+                line0.matrixAutoUpdate = false;
+                wgl_scene.add(line0); //将line添加到场景中
+            }
+            let number = n+zmin;
+            let rnum=(number)*100;
+            //z轴尺度
+            let stringType = rnum.toString()
+            if(n%2==0) {
+                textChinese(stringType.toString(), xmin, ymax + 2, number, 1, 0, 0, 0);
+            }
+        }
+        for (let n0 = 0, len = (xmax-xmin) / 10; n0 <= len; n0++) {
+            //xy面 往x移动 赋值z
+            let line1 = new THREE.Line(geometry2, new THREE.LineBasicMaterial( {
+                // vertexColors: true,
+                // toneMapped: false,
+                color:0x808080
+            } )); //利用geometry和material创建line
+            line1.position.z = n0 * 10 ; //设置line的位置
+            line1.updateMatrix();//更新位置
+            line1.matrixAutoUpdate=false;
+            wgl_scene.add(line1); //将line添加到场景中
+
+            //x轴尺度
+            let number = n0 * 10+xmin;
+            let rnum=(number+Math.abs(xmin))*100;
+            let stringType = rnum.toString();
+
+            if(n0!=0) {
+                textChinese(stringType.toString(), number, ymin, zmax + 3, 2, 0, 0, Math.PI / 2);
+            }
+        }
+
+
+
+
+    }
+    function zuobiaozhou(x0,y0,z0,x1,y1,z1,wgsize,wgsplite){
+        //xyz坐标轴
+        const axesHelper = new THREE.AxesHelper( 120 );
+        axesHelper.position.y =z0;
+        axesHelper.position.z =x0;
+        axesHelper.position.x =y0;
+        axesHelper.updateMatrix();//更新位置
+        axesHelper.matrixAutoUpdate=false;//禁止矩阵变动
+        wgl_scene.add( axesHelper );
+        //xyz字体标注
+
+        loader.load( "../../rescue/fonts/helvetiker_regular.typeface.json", function ( font ) {
+
+            const geometrytext = new THREE.TextGeometry( "X(m)", {
+                font: font,
+                size: 4,
+                height: 2,
+                curveSegments: 4,
+                bevelEnabled: true,
+                bevelThickness: 2,
+                bevelSize: 1.5,
+                bevelOffset: 0,
+                bevelSegments: 5
+            } );
+            let materialstext = [
+                new THREE.MeshPhongMaterial( { color: 0xFFFFFF, flatShading: true } )
+                // , // front
+                // new THREE.MeshPhongMaterial( { color: 0x000000  } ) // side
+            ];
+            let textMesh = new THREE.Mesh(geometrytext, materialstext);
+
+
+            textMesh.position.set(-10+y0, 2+z0, 20+x1)
+            textMesh.rotation.y = Math.PI / 2;//绕现实z45°
+            textMesh.updateMatrix();//更新位置
+            textMesh.matrixAutoUpdate=false;//禁止矩阵变动
+            // textMesh.rotation.y = -1.1
+            // 网格对象添加到场景中
+            wgl_scene.add(textMesh)
+
+
+        } );
+        loader.load( "../../rescue/fonts/helvetiker_regular.typeface.json", function ( font ) {
+
+            const geometrytext = new THREE.TextGeometry( "Z(m)", {
+                font: font,
+                size: 4,
+                height: 2,
+                curveSegments: 4,
+                bevelEnabled: true,
+                bevelThickness: 2,
+                bevelSize: 1.5,
+                bevelOffset: 0,
+                bevelSegments: 5
+            } );
+            let materialstext = [
+                new THREE.MeshPhongMaterial( { color: 0xFFFFFF, flatShading: true } )// front
+
+            ];
+            let textMesh2 = new THREE.Mesh(geometrytext, materialstext);
+
+            textMesh2.position.set(2+y0, 8+z1, -10+x0)
+            textMesh2.rotation.y = Math.PI / 4;//绕现实z45°
+            textMesh2.updateMatrix();//更新位置
+            textMesh2.matrixAutoUpdate=false;//禁止矩阵变动
+            // textMesh.rotation.y = -1.1
+            // 网格对象添加到场景中
+            wgl_scene.add(textMesh2)
+
+
+        } );
+        loader.load( "../../rescue/fonts/helvetiker_regular.typeface.json", function ( font ) {
+
+            const geometrytext = new THREE.TextGeometry( "Y(m)", {
+                font: font,
+                size: 4,
+                height: 2,
+                curveSegments: 4,
+                bevelEnabled: true,
+                bevelThickness: 2,
+                bevelSize: 1.5,
+                bevelOffset: 0,
+                bevelSegments: 5
+            } );
+            let materialstext = [
+                new THREE.MeshPhongMaterial( { color: 0xFFFFFF, flatShading: true } )
+            ];
+            let textMesh3 = new THREE.Mesh(geometrytext, materialstext);
+
+            textMesh3.position.set(10+y1, 2+z0, -5+x0);
+            //textMesh3.rotation.y = Math.PI / 4;//绕现实z45°
+            textMesh3.updateMatrix();//更新位置
+            textMesh3.matrixAutoUpdate=false;//禁止矩阵变动
+            // textMesh.rotation.y = -1.1
+            // 网格对象添加到场景中
+            wgl_scene.add(textMesh3)
+        } );
+
+        chidu(x0,y0,z0,x1,y1,z1);
+        // wanggehelper(x,y,z,20,wgsize,0,0,0);
+        // wanggehelper(x,y,z+100,20,wgsize,0,0,0);
+        // wanggehelper(x,y-wgsize/2,z+wgsize/2,wgsplite,wgsize, Math.PI / 2,0,0);
+        // wanggehelper(x,y+wgsize/2,z+wgsize/2,wgsplite,wgsize, Math.PI / 2,0,0);
+        // wanggehelper(x-wgsize/2,y,z+wgsize/2,wgsplite,wgsize, 0,Math.PI / 2,0);
+        // wanggehelper(x+wgsize/2,y,z+wgsize/2,wgsplite,wgsize, 0,Math.PI / 2,0);
+
+    }
+    function  wgl_show_mine(name,lids)
+    {
+        for(var i=0;i<lids.length;++i)
+        {
+            var index = lids[i];
+            wgl_arrSegShow[index] = 1;
+        }
+        wgl_mineShowed[name] = lids;
+        webgl_color_mine();
+    }
+    function  wgl_hide_mine(name)
+    {
+        if(name in wgl_mineShowed) {
+            for (var i = 0; i < wgl_mineShowed[name].length; ++i) {
+                var index = wgl_mineShowed[name][i];
+                wgl_arrSegShow[index] = 0;
+            }
+            delete wgl_mineShowed[name];
+        }
+        webgl_color_mine();
+    }
+
+
+
+    function wgl_load_roadway_mapping() {
+        $.ajax({
+            type: "GET",
+            url: "/get_roadway_mapping",
+            async: false,
+            success: function (da) {
+                // console.log("get_roadway_mapping:\n   "+JSON.stringify(da));
+                wgl_vertexToSegement = da;
+            }
+        })
+    }
+    function wgl_load_3D_roadway() {
+        $.ajax({
+            type: "POST",
+            url: "/get_3D_roadway",
+            async: false,
+            success: function (da) {
+                wgl_roadway3d = da;
+            }
+        })
+    }
+
+    function webgl_initColorBar(scene,para,min,max)
+    {
+        wgl_lut = new Lut();
+        wgl_lut.setColorMap( para );
+        wgl_lut.setMax( max );
+        wgl_lut.setMin( min );
+        var sprite = new THREE.Sprite( new THREE.SpriteMaterial( {
+            map: new THREE.CanvasTexture( wgl_lut.createCanvas() )
+        } ) );
+        sprite.scale.x = 0.1;
+        var map = sprite.material.map;
+        wgl_lut.updateCanvas( map.image );
+        map.needsUpdate = true;
+        sprite.visible = false;
+        wgl_scene.add( sprite );
+    }
+    function webgl_color_mine(data,min,max) {
+        if(data!=undefined && min!=undefined && max!=undefined){
+            wgl_mine_color_data = data;
+            wgl_mine_color_max = max;
+            wgl_mine_color_min = min;
+        }
+        else{
+            data = wgl_mine_color_data;
+            min = wgl_mine_color_min;
+            max = wgl_mine_color_max;
+        }
+        // console.log(wgl_roadwaysRendering[0]);
+        // console.log((wgl_params[0]));
+        // console.log(min+"  "+max+"   \n"+JSON.stringify(data));
+        if(wgl_roadwaymode==0)
+        {
+            wgl_updateRoadwayfatlineColor(wgl_params[0],min,max,data);
+        } else
+        {
+            // webgl_updateColors(wgl_roadwaysRendering[0],wgl_params[0],min,max,data);
+        }
+        // console.log(wgl_roadwaysRendering[0]);
+    }
+    function webgl_RemoveColors() {
+
+
+        var geometry = wgl_roadwaysRendering[0].geometry;
+        var vertices = geometry.attributes.position;
+        var colors = geometry.attributes.color;
+
+        for ( var i = 0; i < vertices.array.length/3; i ++ ) {
+
+            if(wgl_arrSegShow[wgl_vertexToSegement[i]] == 0 )
+            {
+                colors.setXYZ( i,0.0,0.0, 0.0 );
+            }
+
+        }
+        // console.log(colors);
+        colors.needsUpdate = true;
+
+    }
+    function webgl_updateColors(mesh,para,min,max,data) {
+
+        wgl_lut.setColorMap( para );
+        if(data) {
+            wgl_lut.setMax(max);
+            wgl_lut.setMin(min);
+        }
+        else {
+            wgl_lut.setMax(wgl_Roadway3DYHorizon.maxy);
+            wgl_lut.setMin(wgl_Roadway3DYHorizon.miny);
+        }
+        // wglms_lut.setMax( wglms_Roadway3DYHorizon.miny + max );
+        // wglms_lut.setMin( wglms_Roadway3DYHorizon.miny  );
+
+        var geometry = mesh.geometry;
+        var vertices = geometry.attributes.position;
+        var colors = geometry.attributes.color;
+        // console.log(mesh);
+        // console.log(data);
+        // console.log(colors);
+        // console.log(vertices.array.length/3);
+        // console.log(wgl_vertexToSegement.length);
+        for ( var i = 0; i < vertices.array.length/3; i ++ ) {
+
+
+            if(!data)
+                var colorValue = vertices.array[ i*3+1 ];
+            else
+                var colorValue = data[ wgl_vertexToSegement[0] ];
+            // var color = wgl_lut.getColor( colorValue );
+            // console.log(wgl_Roadway3DYHorizon.miny+":   "+wgl_Roadway3DYHorizon.maxy);
+            var rgb;
+            if(!data)
+                rgb = rgbColorMap(colorValue,wgl_Roadway3DYHorizon.miny,wgl_Roadway3DYHorizon.maxy,"BlueRed");
+            else
+                rgb = rgbColorMap(colorValue,min,max,"BlueRed");
+            var color = {"r":rgb[0]/255.0,"g":rgb[1]/255.0,"b":rgb[2]/255.0};
+            // if(colorValue!=0.0)
+            //     console.log(color);
+
+            // if(data[ wgl_vertexToSegement[i] ]>0.3)
+            //     console.log(color);
+            ////i: TIN-Vertex index, vertexToSegment: TIN-Vertex-Segment Mapping
+            //var color = getColor( ColorValueFunction(vertexToSegment[i]));
+
+            if ( color === undefined ) {
+
+                //console.log( 'Unable to determine color for value:', colorValue );
+                if(wgl_arrSegShow[wgl_vertexToSegement[i]] == 0 )
+                {
+                    colors.setXYZ( i,0.0,0.0, 0.0 );
+                }
+            } else {
+
+                if(wgl_arrSegShow[wgl_vertexToSegement[i]] == 0 )
+                {
+                    colors.setXYZ( i,0.0,0.0, 0.0 );
+                }else{
+                    colors.setXYZ( i, color.r, color.g, color.b );
+                }
+
+
+            }
+
+        }
+        // console.log(colors);
+        colors.needsUpdate = true;
+
+    }
+
+    function wgl_updateRoadwayfatlineColor(colorType, min,max,data)
+    {
+
+        wgl_lut.setColorMap(colorType);
+        if(data) {
+            wgl_lut.setMax(max);
+            wgl_lut.setMin(min);
+        }
+        else {
+            wgl_lut.setMax(wgl_maxz/wgl_globle_scale);
+            wgl_lut.setMin(wgl_minz/wgl_globle_scale);
+            // console.log("Here");
+        }
+
+        for (var i in shpInfo["wfs030101"].data.vLines)
+        {
+
+            var geometry = wgl_arrlines[i].geometry;
+
+            var colors = [];
+
+            var rgb;
+            if(!data)
+            {
+                var colorValue = (shpInfo["wfs030101"].data.vPoints[shpInfo["wfs030101"].data.vLines[i].p0].z )/ wgl_globle_scale;
+                rgb = rgbColorMap(colorValue,wgl_minz/wgl_globle_scale,wgl_maxz/wgl_globle_scale,"BlueRed");
+                var color = {"r":rgb[0]/255.0,"g":rgb[1]/255.0,"b":rgb[2]/255.0};
+                colors.push(color.r, color.g, color.b);
+                colorValue  = (shpInfo["wfs030101"].data.vPoints[shpInfo["wfs030101"].data.vLines[i].p1].z )/ wgl_globle_scale;
+                rgb = rgbColorMap(colorValue,wgl_minz/wgl_globle_scale,wgl_maxz/wgl_globle_scale,"BlueRed");
+                color = {"r":rgb[0]/255.0,"g":rgb[1]/255.0,"b":rgb[2]/255.0};
+                //colors.push(color.r, color.g, color.b);
+            }
+            else
+            {
+                var colorValue = data[i] ;// console.log(colorValue);
+                rgb = rgbColorMap(colorValue,min,max,"BlueRed");
+                color = {"r":rgb[0]/255.0,"g":rgb[1]/255.0,"b":rgb[2]/255.0};
+                colors.push(color.r, color.g, color.b);
+                //colors.push(color.r, color.g, color.b);
+            }
+
+
+            // if(colorValue!=0.0)
+            //     console.log(color);
+
+            // if(data[ wgl_vertexToSegement[i] ]>0.3)
+            //     console.log(color);
+            ////i: TIN-Vertex index, vertexToSegment: TIN-Vertex-Segment Mapping
+            //var color = getColor( ColorValueFunction(vertexToSegment[i]));
+
+            if ( color === undefined ) {
+
+                //console.log( 'Unable to determine color for value:', colorValue );
+                if(wgl_arrSegShow[i] == 0 )
+                {
+                    //colors= [];
+                    // colors.push(0.0, 0.0, 0.0);
+                    //colors.push(0.0, 0.0, 0.0);
+                    color = {"r":0.0,"g":0.0,"b":0.0};
+                }
+            } else {
+
+                if(wgl_arrSegShow[i] == 0 )
+                {
+                    //colors= [];
+                    //colors.push(0.0, 0.0, 0.0);
+                    //colors.push(0.0, 0.0, 0.0);
+                    color = {"r":0.0,"g":0.0,"b":0.0};
+                }
+
+            }
+            wgl_arrlines[i].material.color = color;
+            // geometry.setColors(colors);
+            // //console.log(colors);
+            //colors.needsUpdate = true;
+        }
+
+    }
+
+    function wgl_updateRoadwaylineColor(colorType, min,max,data)
+    {
+
+        wgl_lut.setColorMap(colorType);
+        if(data) {
+            wgl_lut.setMax(max);
+            wgl_lut.setMin(min);
+        }
+        else {
+            wgl_lut.setMax(wgl_maxz/wgl_globle_scale);
+            wgl_lut.setMin(wgl_minz/wgl_globle_scale);
+            // console.log("Here");
+        }
+
+        for (var i in shpInfo["wfs030101"].data.vLines)
+        {
+
+            var geometry = wgl_arrlines[i].geometry;
+
+            var colors = [];
+
+            var rgb;
+            if(!data)
+            {
+                var colorValue = (shpInfo["wfs030101"].data.vPoints[shpInfo["wfs030101"].data.vLines[i].p0].z )/ wgl_globle_scale;
+                rgb = rgbColorMap(colorValue,wgl_minz/wgl_globle_scale,wgl_maxz/wgl_globle_scale,"BlueRed");
+                var color = {"r":rgb[0]/255.0,"g":rgb[1]/255.0,"b":rgb[2]/255.0};
+                colors.push(color.r, color.g, color.b);
+                colorValue  = (shpInfo["wfs030101"].data.vPoints[shpInfo["wfs030101"].data.vLines[i].p1].z )/ wgl_globle_scale;
+                rgb = rgbColorMap(colorValue,wgl_minz/wgl_globle_scale,wgl_maxz/wgl_globle_scale,"BlueRed");
+                color = {"r":rgb[0]/255.0,"g":rgb[1]/255.0,"b":rgb[2]/255.0};
+                //colors.push(color.r, color.g, color.b);
+            }
+            else
+            {
+                var colorValue = data[i] ;// console.log(colorValue);
+                rgb = rgbColorMap(colorValue,min,max,"BlueRed");
+                color = {"r":rgb[0]/255.0,"g":rgb[1]/255.0,"b":rgb[2]/255.0};
+                colors.push(color.r, color.g, color.b);
+                //colors.push(color.r, color.g, color.b);
+            }
+
+
+            // if(colorValue!=0.0)
+            //     console.log(color);
+
+            // if(data[ wgl_vertexToSegement[i] ]>0.3)
+            //     console.log(color);
+            ////i: TIN-Vertex index, vertexToSegment: TIN-Vertex-Segment Mapping
+            //var color = getColor( ColorValueFunction(vertexToSegment[i]));
+
+            if ( color === undefined ) {
+
+                //console.log( 'Unable to determine color for value:', colorValue );
+                if(wgl_arrSegShow[i] == 0 )
+                {
+                    colors= [];
+                    colors.push(0.0, 0.0, 0.0);
+                    //colors.push(0.0, 0.0, 0.0);
+                }
+            } else {
+
+                if(wgl_arrSegShow[i] == 0 )
+                {
+                    colors= [];
+                    colors.push(0.0, 0.0, 0.0);
+                    //colors.push(0.0, 0.0, 0.0);
+                }
+
+            }
+            //wgl_arrlines[i].material.color = color;
+            geometry.setColors(colors);
+            //console.log(colors);
+            colors.needsUpdate = true;
+        }
+
+    }
+
+    function wgl_load_3D_layers() {
+        $.ajax({
+            type: "POST",
+            url: "/get_3D_layers",
+            async: false,
+            success: function (da) {
+                wgl_layers = da;
+            }
+        })
+    }
+
+    function wgl_load_3D_golfs() {
+        $.ajax({
+            type: "POST",
+            url: "/get_3D_golfs",
+            async: false,
+            success: function (da) {
+                wgl_golfs = da;
+            }
+        })
+    }
+    function wgl_load_3D_microse(time) {
+        $.ajax({
+            type: "POST",
+            url: "/get_microseism_magnitude",
+            async: false,
+            data:{"time":time},
+            success: function (da) {
+                wgl_microseismic = da;
+            }
+        })
+    }
+
+    function wgl_load_3D_profile(vertices,ztop,zbottom,texturePath,name) {
+        if(wgl_profiles[name]!=undefined)
+            return;
+        // console.log("load profile:  "+name);
+        $.ajax({
+            type: "POST",
+            url: "/get_3D_profile",
+            data: {"vertices":vertices,"ztop":ztop,"zbottom":zbottom,"texturePath":texturePath,"name":name},
+            traditional: true,
+            async: false,
+            success: function (da) {
+                console.log(da);
+                wgl_profiles[da.name] = da;
+                // console.log( JSON.stringify(wgl_profiles)+"\n"+name);
+            }
+        })
+    }
+
+    function wgl_render() {
+
+        // for(var i in wgl_gridMesh)
+        // {
+        //     wgl_gridMesh[i].visible = wgl_gridMeshVisible;
+        // }
+
+        if(wgl_cjjTuli!=null)
+        {
+            wgl_cjjTuli.visible  =  wgl_cjjTuliVisible;
+            // console.log(wgl_cjjTuli);
+            // console.log(wgl_cjjTuliVisible);
+        }
+
+        zxcube1.visible = zxcube2.visible = wgl_clipCubeVisible;
+
+        // console.log(wgl_camera);
+        // console.log(wgl_controls);
+        //changeRendering();
+
+        for(var i in wgl_arrProfiles)
+        {
+            wgl_arrProfiles[i].visible = wgl_isProfilesVisable[i];
+        }
+        for(var i in wgl_arrStratumLayers)
+        {
+            //console.log(i);
+            // console.log(wgl_arrStratumLayers[i]);
+            wgl_arrStratumLayers[i].visible = wgl_isStratumLayersVisable[i];
+        }
+        if(humanPosition.length>0)
+            initHuman(humanPosition);
+
+        for(var i in wgl_arrEvacPaths)
+        {
+            wgl_arrEvacPaths[i].visible = wgl_isEvacPathVisable;
+        }
+        for(var i in wgl_arrPersonnelLocationStation)
+        {
+            wgl_arrPersonnelLocationStation[i].visible = wgl_isPersonnelLoationVisable;
+        }
+
+        if(humanLocationFlag)
+        {
+            // console.log(wgl_arrHumans_color);
+            for (var i in wgl_arrHuman) {
+                wgl_arrHuman[i].visible = wgl_isHumanPositionVisable;
+                wgl_arrHuman[i].material.color = wgl_arrHumans_color[i];
+            }
+            // console.log(wgl_isHumanPositionVisable);
+            // console.log(wgl_arrHuman);
+        }
+
+
+        /////20190605add begin
+        for(var i in wgl_arrWaterHeightStation)
+        {
+            wgl_arrWaterHeightStation[i].visible = wgl_isWaterHeightStationVisable;
+
+        }
+        for(var i in wgl_arrFlowStation)
+        {
+            wgl_arrFlowStation[i].visible = wgl_isFlowStationVisable;
+        }
+
+
+
+        for(var i in wgl_arrPumpStation)
+        {
+            wgl_arrPumpStation[i].visible = wgl_isPumpStationVisable;
+        }
+
+        for(var i in wgl_arrGate)
+        {
+            wgl_arrGate[i].visible = wgl_isGateVisable;
+        }
+
+        for(var i in wgl_arrShelter)
+        {
+            wgl_arrShelter[i].visible = wgl_isShelterVisable;
+        }
+
+        for(var i in wgl_arrGoaf)
+        {
+            wgl_arrGoaf[i].visible = wgl_isGoafVisable;
+        }
+
+        for(var i in wgl_arrMicroSeismic)
+        {
+            wgl_arrMicroSeismic[i].visible = wgl_isMicroSeismicVisable;
+        }
+
+        for(var i in wgl_arrCQTDrills)
+        {
+            wgl_arrCQTDrills[i].visible = wgl_isCQTDrillsVisable;
+        }
+        wgl_dem.visible = wgl_isDemVisable;
+
+        for(let i = 0 ; i < drills.length ; i ++)
+            for(  j = 0 ; j < arrDrills[drills[i].name].length ; j ++)
+                if(arrDrills[drills[i].name][j]!=null)
+                    arrDrills[drills[i].name][j].visible = wgl_isGeoDrillsVisible[j];
+
+        //stats.update();
+        // main wgl_scene
+
+        wgl_renderer.setClearColor( 0x111100, 0 );
+
+        wgl_renderer.setViewport( 0, 0, webgl_width, webgl_height );
+
+
+        for (var i in wgl_arrHumanEvacPaths){
+            wgl_arrHumanEvacPaths[i].visible = wgl_isEvacPathVisable;
+            wgl_arrHumanEvacPaths[i].material.resolution.set( webgl_width, webgl_height ); // resolution of the viewport
+        }
+
+        for (var i in wgl_arrAdditonallines){
+
+            wgl_arrAdditonallines[i].visible = wgl_isarrAdditonallineVisable;
+            wgl_arrAdditonalMatlines[i].resolution.set( webgl_width, webgl_height  ); // resolution of the viewport
+        }
+        for(var i in wgl_arrAdditionalPoints)
+        {
+            wgl_arrAdditionalPoints[i].visible = wgl_isarrAdditonalPointsVisable;
+        }
+
+        for(var i in wgl_arrFaults)
+        {
+            ////console.log(i);
+            // //console.log(wgl_arrStratumLayers[i]);
+            // wgl_arrStratumLayers[i].visible =true;
+            wgl_arrFaults[i].visible = wgl_isFaultsVisable[i];
+        }
+        // for( let i = 0; i < wgl_scene.children.length; i++)
+        // {
+        //     wgl_scene.children[i].position.set(0,-5,0);
+        // }
+
+
+        // plight.position.x = camera_vector.x;
+        // plight.position.y = camera_vector.y;
+        // plight.position.z = camera_vector.z;
+        // console.log(wgl_camera);
+        // console.log(plight);
+
+        wgl_renderer.clear();
+        wgl_renderer.render( wgl_scene, wgl_camera );
+        wgl_renderer.render( wgl_uiScene, wgl_orthoCamera );
+
+        wgl_renderer.clearDepth(); // important!
+        wgl_controls.update(wgl_clock.getDelta());
+    }
+
+
+    function wgl_animate(){
+
+        //++++
+        //    if (resizeRendererToDisplaySize(wgl_animate)) {
+        //        const canvas = renderer.domElement;
+        //        camera.aspect = canvas.clientWidth / canvas.clientHeight;
+        //        camera.updateProjectionMatrix();
+        //    }
+
+        let camera_vector = wgl_camera.position.clone();
+
+        //plight.position.set(camera_vector.x,camera_vector.y,camera_vector.z);
+        // document.getElementById('xx').innerHTML="1:"+Math.round(Math.abs(wgl_camera.position.z))+"m";
+        wgl_camera.aspect = window.innerWidth / window.innerHeight;
+        requestAnimationFrame( wgl_animate );
+
+        // var rendertime =  Date.now();
+        /*
+        wgl_worldtime++;
+        // console.log("time" ,rendertime );
+        // console.log("time" ,wgl_worldtime);
+
+        if(wgl_worldtime%100 == 0)
+        {
+            changeRenderingMode(0);
+            console.log("change" );
+        }*/
+
+        // wgl_render();
+
+    }
+//计算包围盒
+    function getRoadwayXYZHorizon(vertices){
+        wgl_minx = wgl_maxx = vertices[0].x;
+        wgl_miny = wgl_maxy = vertices[0].y;
+        wgl_minz = wgl_maxz = vertices[0].z;
+
+        for(var i in vertices)
+        {
+            if(vertices[i].x >= wgl_maxx)
+            {
+                wgl_maxx = vertices[i].x;
+            }
+            if(vertices[i].y >= wgl_maxy)
+            {
+                wgl_maxy = vertices[i].y;
+            }
+            if(vertices[i].z >= wgl_maxz)
+            {
+                wgl_maxz = vertices[i].z;
+            }
+            if(vertices[i].x <= wgl_minx)
+            {
+                wgl_minx = vertices[i].x;
+            }
+            if(vertices[i].y <= wgl_miny)
+            {
+                wgl_miny = vertices[i].y;
+            }
+            if(vertices[i].z <= wgl_minz)
+            {
+                wgl_minz = vertices[i].z;
+            }
+        }
+
+        console.log("wgl_minx:"+wgl_minx);
+        console.log("wgl_miny:"+wgl_miny);
+        console.log("wgl_maxx:"+wgl_maxx);
+        console.log("wgl_maxy:"+wgl_maxy);
+
+        wgl_xHorizon = wgl_maxx - wgl_minx;
+        wgl_yHorizon = wgl_maxy - wgl_miny;
+        wgl_zHorizon = wgl_maxz - wgl_minz;
+    }
+//每条道路用线条的形式 做了偏移等操作
+    function initRoadway(){
+        // console.log("wgl_minx："+wgl_minx);
+        // console.log("wgl_miny: "+wgl_miny);
+        // console.log("wgl_maxx："+wgl_maxx);
+        // console.log("wgl_maxy: "+wgl_maxy);
+        var color = new THREE.Color();
+        for (var i in shpInfo["wfs030101"].data.vLines) {
+            var positions1 = [];
+            var colors1 = [];
+
+            color.setHSL(1.0, 1.0, 1.0);
+            var x0 = (shpInfo["wfs030101"].data.vPoints[shpInfo["wfs030101"].data.vLines[i].p0].x - wgl_minx- wgl_xHorizon/2)/ wgl_globle_scale;
+            var y0 = -(shpInfo["wfs030101"].data.vPoints[shpInfo["wfs030101"].data.vLines[i].p0].y  - wgl_miny- wgl_yHorizon/2)/ wgl_globle_scale ;
+            var z0 = (shpInfo["wfs030101"].data.vPoints[shpInfo["wfs030101"].data.vLines[i].p0].z*wgl_zScale )/ wgl_globle_scale;
+            positions1.push(x0,  z0,  y0);
+            colors1.push(color.r, color.g, color.b);
+            var x1 = (shpInfo["wfs030101"].data.vPoints[shpInfo["wfs030101"].data.vLines[i].p1].x - wgl_minx- wgl_xHorizon/2)/ wgl_globle_scale;
+            var y1 = -(shpInfo["wfs030101"].data.vPoints[shpInfo["wfs030101"].data.vLines[i].p1].y  - wgl_miny- wgl_yHorizon/2)/ wgl_globle_scale ;
+            var z1 = (shpInfo["wfs030101"].data.vPoints[shpInfo["wfs030101"].data.vLines[i].p1].z*wgl_zScale)/ wgl_globle_scale;
+            positions1.push(x1,  z1,  y1);
+            colors1.push(color.r, color.g, color.b);
+
+            // var geometry1 = new THREE.LineGeometry();
+            // geometry1.setPositions(positions1);
+            // geometry1.setColors(colors1);
+            // wgl_arrMatlines[i] = new THREE.LineMaterial({
+            //
+            //     color: 0xffffff,
+            //     linewidth: 5, // in pixels
+            //     vertexColors: THREE.VertexColors,
+            //     //resolution:  // to be set by wgl_renderer, eventually
+            //     dashed: false
+            //
+            // });
+            // var line1 = new THREE.Line2(geometry1, wgl_arrMatlines[i]);
+            // line1.computeLineDistances();
+            // line1.scale.set(1, 1, 1);
+            var geometry1 = new THREE.Geometry();
+            geometry1.vertices.push( new THREE.Vector3( x0,  z0,  y0));
+            geometry1.vertices.push( new THREE.Vector3(x1,  z1,  y1));
+            wgl_arrMatlines[i] = new THREE.LineBasicMaterial({
+
+                color: 0xD79700,
+            });
+
+            var line1 = new THREE.Line(geometry1,  wgl_arrMatlines[i]);
+            wgl_arrlines[i] = line1;
+            wgl_scene.add(wgl_arrlines[i]);
+
+        }
+
+        /* var floorGeometry = new THREE.PlaneGeometry(100, 100, 99, 99);
+         var floorMaterial = new THREE.MeshPhongMaterial({
+             color: 0x004560,
+             specular: 0x000000,
+             shininess: 100
+         });
+         var floor = new THREE.Mesh(floorGeometry, floorMaterial);
+         floor.rotation.x = -0.5 * Math.PI;
+         floor.receiveShadow = true;
+         wgl_scene.add(floor);*/
+    }
+
+
+    function initAdditionalRoadway_l(lns){
+        let points = [];
+        let lines = [];
+
+        for(let i=0;i<lns.length;i++){
+            points.push(lns[i][0]);
+            points.push(lns[i][1]);
+            lines.push([i*2,i*2+1]);
+        }
+        // console.log(points);
+        // console.log(lines);
+
+        initAdditionalRoadway(points,lines);
+    }
+    //绘制附加的道路或通道线段
+    function initAdditionalRoadway(points,lines){
+        var color = new THREE.Color();
+        for (var i in lines) {
+            var positions1 = [];
+            var colors1 = [];
+            var p0 = lines[i][0];
+            var p1 = lines[i][1];
+            // color.setHSL(1.0, 1.0, 1.0);
+            var x0 = (points[p0][0] - wgl_minx- wgl_xHorizon/2)/ wgl_globle_scale;
+            var y0 = -(points[p0][1]  - wgl_miny- wgl_yHorizon/2)/ wgl_globle_scale ;
+            var z0 = (points[p0][2]*wgl_zScale )/ wgl_globle_scale;
+
+
+            // colors1.push(color.r, color.g, color.b);
+            colors1.push(255,0,0);
+            var x1 = (points[p1][0] - wgl_minx- wgl_xHorizon/2)/ wgl_globle_scale;
+            var y1 = -(points[p1][1]  - wgl_miny- wgl_yHorizon/2)/ wgl_globle_scale ;
+            var z1 = (points[p1][2]*wgl_zScale)/ wgl_globle_scale;
+            positions1.push(x0,  z0,  y0);
+            positions1.push(x1,  z1,  y1);
+            // positions1.push(points[p1][0],  points[p1][1],  points[p1][2]);
+            // positions1.push(points[p0][0],  points[p0][1],  points[p0][2]);
+            // colors1.push(color.r, color.g, color.b);
+            colors1.push(255,0,0);
+
+            var geometry1 = new THREE.LineGeometry();
+            geometry1.setPositions(positions1);
+            geometry1.setColors(colors1);
+            wgl_arrAdditonalMatlines[i] = new THREE.LineMaterial({
+
+                color: 0xffffff,
+                linewidth: 3, // in pixels
+                vertexColors: THREE.VertexColors,
+                //resolution:  // to be set by wgl_renderer, eventually
+                dashed: false
+
+            });
+            var line1 = new THREE.Line2(geometry1, wgl_arrAdditonalMatlines[i]);
+            line1.computeLineDistances();
+            line1.scale.set(1, 1, 1);
+            // var geometry1 = new THREE.Geometry();
+            // geometry1.vertices.push( new THREE.Vector3( x0,  z0,  y0));
+            // geometry1.vertices.push( new THREE.Vector3(x1,  z1,  y1));
+            // wgl_arrAdditonalMatlines[i] = new THREE.LineBasicMaterial({
+            //
+            //     color: 0xff0000,
+            // });
+            //
+            // var line1 = new THREE.Line(geometry1,  wgl_arrAdditonalMatlines[i]);
+            wgl_arrAdditonallines[i] = line1;
+            wgl_scene.add(wgl_arrAdditonallines[i]);
+
+        }
+
+        wgl_isarrAdditonallineVisable = true;
+
+    }
+    function setAdditionalRoadwayVisable(lines) {
+        initAdditionalRoadway_l(lines);
+        wgl_isarrAdditonallineVisable = true;
+    }
+    function setAdditionalRoadwayInvisable() {
+        wgl_isarrAdditonallineVisable = false;
+    }
+//附加的点
+    function initAdditionalPoints(points){
+        // alert("init:"+JSON.stringify(arrHuman));
+
+
+        for(let i=0;i<points.length;i++)
+        {
+            let geometry = new THREE.SphereBufferGeometry( 0.25, 32, 32 );
+            let material = new THREE.MeshBasicMaterial( {color: 0xf00840} );
+            let sphere = new THREE.Mesh( geometry, material );
+
+
+            if(i>=wgl_arrAdditionalPoints.length) {
+                wgl_arrAdditionalPoints.push(sphere);
+                wgl_scene.add(sphere);
+            }
+            wgl_arrAdditionalPoints[i].position.x = (points[i][0] - wgl_minx-wgl_xHorizon/2)/ wgl_globle_scale;
+            wgl_arrAdditionalPoints[i].position.y = (points[i][2]*wgl_zScale  )/ wgl_globle_scale;
+            wgl_arrAdditionalPoints[i].position.z = -(points[i][1]  - wgl_miny-wgl_yHorizon/2)/ wgl_globle_scale ;
+            // wgl_arrAdditionalPoints[i].position.x = points[i][0];
+            // wgl_arrAdditionalPoints[i].position.y = points[i][2];
+            // wgl_arrAdditionalPoints[i].position.z = points[i][1];
+        }
+        wgl_isarrAdditonalPointsVisable =true;
+    }
+    function setAdditonalPointsVisable(points) {
+        initAdditionalPoints(points);
+        wgl_isarrAdditonalPointsVisable = true;
+    }
+    function setAdditonalPointsInvisable() {
+        wgl_isarrAdditonalPointsVisable = false;
+    }
+
+//
+    function initPeronnelLocationStation(shpDataJson){
+
+        wgl_arrPersonnelLocationStation = [];
+        for(var i in shpDataJson)
+        {
+            var cgeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+            var cmaterial = new THREE.MeshPhongMaterial({ // Required For Shadows
+                color: 0x800080,
+                specular: 0x000000,
+                shininess: 100
+            });
+            var cube = new THREE.Mesh(cgeometry, cmaterial);
+            var x0 = (shpDataJson[i].x - wgl_minx-wgl_xHorizon/2)/ wgl_globle_scale;
+            var y0 = -(shpDataJson[i].y  - wgl_miny-wgl_yHorizon/2)/ wgl_globle_scale ;
+            var z0 = (shpDataJson[i].z*wgl_zScale )/ wgl_globle_scale;
+            addcube(cube,x0, z0,y0);
+            wgl_arrPersonnelLocationStation[i] = cube;
+        }
+    }
+    //人员位置数据
+    function initHuman(arrHuman){
+        // alert("init:"+JSON.stringify(arrHuman));
+        if(!Array.isArray(arrHuman)){
+            // console.log("初始化三维人员位置输入数据不是列表，请检查！！！");
+            return;
+        }
+
+        for(let i=0;i<arrHuman.length;i++)
+        {
+            let geometry = new THREE.SphereBufferGeometry( 0.2, 32, 32 );
+            let material = new THREE.MeshBasicMaterial( {color: 0xf08000} );
+            let sphere = new THREE.Mesh( geometry, material );
+
+            //确保wgl_arrHuman变量中的每一个元素都添加到了wgl_scene中
+            if(i>=wgl_arrHuman.length) {
+                wgl_arrHuman.push(sphere);
+                wgl_scene.add(sphere);
+            }
+            wgl_arrHuman[i].position.x = (arrHuman[i][0] - wgl_minx-wgl_xHorizon/2)/ wgl_globle_scale;
+            wgl_arrHuman[i].position.y = (arrHuman[i][2]*wgl_zScale  )/ wgl_globle_scale;
+            wgl_arrHuman[i].position.z = -(arrHuman[i][1]  - wgl_miny-wgl_yHorizon/2)/ wgl_globle_scale ;
+        }
+        //将多余元素移出显示视野
+        for(let i =arrHuman.length;i<wgl_arrHuman.length;i++){
+            wgl_arrHuman[i].position.x = -100.0;
+            wgl_arrHuman[i].position.y = 100.0;
+            wgl_arrHuman[i].position.z = 100.0;
+        }
+    }
+
+    // function initEvacPath(pathList) {
+    //     if(!Array.isArray(pathList)){
+    //         console.log("初始化三维人员位置输入数据不是列表，请检查！！！");
+    //         return;
+    //     }
+    //
+    //     console.log("init evac path start: ");
+    //     console.log(wgl_arrHumanEvacPaths);
+    //
+    //     for(let i=0;i<pathList.length;i++){
+    //         console.log("3D path: " + i);
+    //         const line = createEvcPathLine(pathList[i]);
+    //         if(i>=wgl_arrHumanEvacPaths.length){
+    //             wgl_arrHumanEvacPaths.push(line);
+    //             wgl_scene.add(line);
+    //         }
+    //         else {
+    //             wgl_arrHumanEvacPaths[i] = line;
+    //         }
+    //     }
+    //     for(let i=pathList.length;i<wgl_arrHumanEvacPaths.length;i++){
+    //         wgl_arrHumanEvacPaths[i] = createEvcPathLine([{"x":-100.0,"y":100.0,"z":100.0}]);
+    //     }
+    //
+    //     console.log("init evac path end: ");
+    //     console.log(wgl_arrHumanEvacPaths);
+    // }
+    // function createEvcPathLine(PathDataJson) {
+    //     var color = new THREE.Color();
+    //     var positions1 = [];
+    //     var colors1 = [];
+    //     console.log("path length: " + PathDataJson.length);
+    //     for (let i=0;i<PathDataJson.length;i++) {
+    //         color.setRGB(1.0, 0.0, 0.0);
+    //         let x0 = -(PathDataJson[i].x - wgl_minx)/ wgl_globle_scale;
+    //         let y0 = (PathDataJson[i].y  - wgl_miny)/ wgl_globle_scale ;
+    //         let z0 = (PathDataJson[i].z )/ wgl_globle_scale;
+    //         positions1.push(x0, z0, y0);
+    //         colors1.push(color.r, color.g, color.b);
+    //     }
+    //     console.log("one path end.");
+    //     let geometry1 = new THREE.LineGeometry();
+    //     geometry1.setPositions(positions1);
+    //     geometry1.setColors(colors1);
+    //     let Matlines = new THREE.LineMaterial({
+    //
+    //         color: 0xffffff,
+    //         linewidth: 5, // in pixels
+    //         vertexColors: THREE.VertexColors,
+    //         //resolution:  // to be set by wgl_renderer, eventually
+    //         dashed: false
+    //
+    //     });
+    //     let line1 = new THREE.Line2(geometry1, Matlines);
+    //     line1.computeLineDistances();
+    //     line1.scale.set(1, 1, 1);
+    //
+    //     return line1;
+    // }
+    function initEvacPath(pathList) {
+        if(!Array.isArray(pathList)){
+            // console.log("初始化三维人员位置输入数据不是列表，请检查！！！");
+            return;
+        }
+
+        for(let i=0;i<pathList.length;i++){
+            // console.log("3D path: " + i);
+            if(!Array.isArray(pathList[i]))
+                continue;
+            const geometry1 = createEvcPathLine(pathList[i]);
+            if(i>=wgl_arrHumanEvacPaths.length){
+                let Matlines = new THREE.LineMaterial({
+
+                    color: 0xffffff,
+                    linewidth: 3, // in pixels
+                    vertexColors: THREE.VertexColors,
+                    //resolution:  // to be set by wgl_renderer, eventually
+                    dashed: false
+
+                });
+                let line1 = new THREE.Line2(geometry1, Matlines);
+                line1.computeLineDistances();
+                line1.scale.set(1, 1, 1);
+
+                // line1.postion.y = -5;
+
+                wgl_arrHumanEvacPaths.push(line1);
+
+                wgl_scene.add(line1);
+            }
+            else
+                wgl_arrHumanEvacPaths[i].geometry = geometry1;
+        }
+        for(let i=pathList.length;i<wgl_arrHumanEvacPaths.length;i++){
+            wgl_arrHumanEvacPaths[i].geometry = createEvcPathLine([{"x":-100.0,"y":100.0,"z":100.0}]);
+        }
+    }
+    function createEvcPathLine(PathDataJson) {
+        var color = new THREE.Color();
+        var positions1 = [];
+        var colors1 = [];
+        // console.log("path length: " + PathDataJson.length);
+        for (let i=0;i<PathDataJson.length;i++) {
+            color.setRGB(1.0, 0.0, 0.0);
+            let x0 = (PathDataJson[i].x - wgl_minx-wgl_xHorizon/2)/ wgl_globle_scale;
+            let y0 = -(PathDataJson[i].y  - wgl_miny-wgl_yHorizon/2)/ wgl_globle_scale ;
+            let z0 = (PathDataJson[i].z*wgl_zScale )/ wgl_globle_scale - 5;
+            positions1.push(x0, z0, y0);
+            colors1.push(color.r, color.g, color.b);
+        }
+        // console.log("one path end.");
+        let geometry1 = new THREE.LineGeometry();
+        geometry1.setPositions(positions1);
+        geometry1.setColors(colors1);
+
+        return geometry1;
+    }
+
+    function initCKQ(arr, tDepth,x,y,z) {
+        // note: default UVs generated by ShapeBufferGeometry are simply the x- and y-coordinates of the vertices
+        var californiaPts = [];
+        var px, py,pz;
+        px=py=pz = 0.0;
+        for(var i=0; i<arr.length;++i)
+        {
+            // var a = arr[i];
+            //californiaPts.push( new THREE.Vector2( mpoints[a][0]/100, mpoints[a][2]/100) );
+            californiaPts.push( new THREE.Vector2( 0, 0) );
+            californiaPts.push( new THREE.Vector2( 2, 0) );
+            californiaPts.push( new THREE.Vector2( 2, 2) );
+            californiaPts.push( new THREE.Vector2( 0, 2) );
+            /*					px += -mpoints[a][0]/100/arr.length;
+                                py += mpoints[a][2]/100/arr.length;
+                                pz += mpoints[a][1]/100/arr.length;*/
+        }
+        px = x;
+        py = y;
+        pz = z;
+        //for ( var i = 0; i < californiaPts.length; i ++ ) californiaPts[ i ].multiplyScalar( 0.2 );
+
+        var californiaShape = new THREE.Shape( californiaPts );
+
+        var extrudeSettings = { depth:tDepth, bevelEnabled: true, bevelSegments: 0, steps: 1, bevelSize: 1, bevelThickness: 0.5 };
+
+        addShape( californiaShape, extrudeSettings, 0xf08000, 0, 0, 0,  -0.5 * Math.PI, 0, 0, 1 );
+    }
+
+    function addShape( shape, extrudeSettings, color, x, y, z, rx, ry, rz, s ) {
+
+        // note: default UVs generated by ShapeBufferGeometry are simply the x- and y-coordinates of the vertices
+        // California
+
+        var geometry = new THREE.ExtrudeBufferGeometry( shape, extrudeSettings );
+
+        var mesh = new THREE.Mesh( geometry, new THREE.MeshPhongMaterial( { color: color } ) );
+        mesh.position.set( x, y, z );
+        mesh.rotation.set( rx, ry, rz );
+        mesh.scale.set( s, s, s );
+        wgl_scene.add( mesh );
+
+
+    }
+
+
+    function initGoafComplex(wgl_golfs) {
+
+
+        for(var i=0;i<wgl_golfs.length;++i)
+        {
+            var tGoafPts = [];
+            var golfsZ = [];
+            var golfsAvgZ = 0.0;
+            var vNum =wgl_golfs[i].vertices.length/3;
+            for(var j=0; j<vNum;++j)
+            {
+                var x0 = wgl_golfs[i].vertices[j*3];
+                var y0 = wgl_golfs[i].vertices[j*3+1];
+                var z0 = wgl_golfs[i].vertices[j*3+2];
+                tGoafPts.push( new THREE.Vector2( x0, y0) );
+                golfsZ.push(z0);
+                golfsAvgZ += z0;
+            }
+            var tDepth = 0.3;
+
+            var px, py,pz;
+            px=py=pz = 0.0;
+
+            px = 0;
+            // py = y*wgl_zScale;
+            // console.log(golfsZ[0]);
+            // console.log(golfsAvgZ/vNum);
+            py = golfsZ[0] ;
+            pz = 0;
+            // for ( var i = 0; i < tGoafPts.length; i ++ )//tGoafPts[ i ].multiplyScalar( 0.2 );
+
+            var tGoafShape = new THREE.Shape( tGoafPts );
+
+            var extrudeSettings = { depth:tDepth, bevelEnabled: true, bevelSegments: 0, steps: 1, bevelSize: 0, bevelThickness: 0.5 };
+            // console.log(i);
+            addGoafShape( i ,tGoafShape, extrudeSettings, 0xf08000, px, py, pz, 0.5 * Math.PI , 0, 0, 1 );
+        }
+
+    }
+
+
+    function initGoafMeshComplex(wgl_golfs) {
+
+
+        for (var i = 0; i < wgl_golfs.length; ++i) {
+
+            var geometry = new THREE.BufferGeometry();
+            //一个五边形多边形的顶点位置数据
+            var vertices = new Float32Array(wgl_golfs[i].vertices);
+            // 创建属性缓冲区对象
+            var attribue = new THREE.BufferAttribute(vertices, 3); //3个为一组
+            // 设置几何体attributes属性的位置position属性
+            geometry.attributes.position = attribue
+
+
+            // console.log(wgl_golfs[i]);
+
+            // for(var j=0;j<wgl_golfs[i].vertices.length/3;++j)
+            // {
+            //
+            //     var cgeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+            //     var cmaterial = new THREE.MeshPhongMaterial({ // Required For Shadows
+            //         color: 0x00FFFF,
+            //         specular: 0x000000,
+            //         shininess: 100
+            //     });
+            //     var cube = new THREE.Mesh(cgeometry, cmaterial);
+            //     var x0 = wgl_golfs[i].vertices[j*3];
+            //
+            //     var z0 = wgl_golfs[i].vertices[j*3+1];
+            //     // if(z0>0)
+            //     // {
+            //     //     console.log(wgl_golfs[i]);
+            //     //     console.log(j);
+            //     // }
+            //     var y0 = wgl_golfs[i].vertices[j*3+2];
+            //     addcube(cube,x0, z0,y0);
+            // }
+            // 三角形顶点索引计算
+            var arr = new Array();
+            // console.log("vertices.length"+ wgl_golfs[i].vertices.length)
+            for(var j=0;j<wgl_golfs[i].vertices.length;++j)
+            {
+                if(j%3 != 1)
+                {
+                    arr.push(wgl_golfs[i].vertices[j]*10);
+                }
+
+
+            }
+
+            var trianglesIndex = earcut(arr,null,2);
+
+            // Uint16Array类型数组创建顶点索引数据
+            var indexes = new Uint16Array(trianglesIndex)
+            // 索引数据赋值给几何体的index属性
+            geometry.index = new THREE.BufferAttribute(indexes, 1); //1个为一组
+            // 不执行computeVertexNormals，没有顶点法向量数据
+            geometry.computeVertexNormals(); //不计算法线，表面比较暗，计算了比较亮，
+            // console.log(`查看几何体顶点数据`, geometry);
+            //材质对象
+            var material = new THREE.MeshLambertMaterial({
+                color: 0xf08000, //三角面颜色
+                side: THREE.DoubleSide, //两面可见
+                // 查看剖分的三角形效果
+                // wireframe:true,
+            });
+            var mesh = new THREE.Mesh(geometry, material); //网格模型对象Mesh
+            wgl_arrGolfs[i] = mesh;
+            wgl_scene.add( mesh );
+
+        }
+    }
+
+    function setGoafsVisible()
+    {
+        var visible = true;
+        if(wgl_arrGolfs[0].visible==false)
+        {
+            visible = true;
+        }else{
+            visible = false;
+        }
+        for(var i=0;i<wgl_arrGolfs.length;++i)
+        {
+            wgl_arrGolfs[i].visible = visible;
+        }
+    }
+
+    function initGoaf(arr, x,y,z, num) {
+        // note: default UVs generated by ShapeBufferGeometry are simply the x- and y-coordinates of the vertices
+        var tDepth =(arr[8] - arr[9])/wgl_globle_scale;
+        var tGoafPts = [];
+        var px, py,pz;
+        px=py=pz = 0.0;
+        for(i=0; i<8;i+=2)
+        {
+            var x0 = (arr[i] - wgl_minx - wgl_xHorizon/2)/ wgl_globle_scale;
+            var y0 = -(arr[i+1] - wgl_miny - wgl_yHorizon/2)/ wgl_globle_scale;
+            tGoafPts.push( new THREE.Vector2( x0, y0) );
+        }
+
+        px = 0;
+        py = y*wgl_zScale;
+        pz = 0;
+        // for ( var i = 0; i < tGoafPts.length; i ++ )//tGoafPts[ i ].multiplyScalar( 0.2 );
+
+        var tGoafShape = new THREE.Shape( tGoafPts );
+
+        var extrudeSettings = { depth:tDepth, bevelEnabled: true, bevelSegments: 0, steps: 1, bevelSize: 0, bevelThickness: 0.5 };
+
+
+        addGoafShape( num,tGoafShape, extrudeSettings, 0xf08000, px, py, pz, 0.5 * Math.PI , 0, 0, 1 );
+
+
+    }
+
+    function addGoafShape( num,shape, extrudeSettings, color, x, y, z, rx, ry, rz, s ) {
+
+        // note: default UVs generated by ShapeBufferGeometry are simply the x- and y-coordinates of the vertices
+        // California
+
+        var geometry = new THREE.ExtrudeBufferGeometry( shape, extrudeSettings );
+
+        var mesh = new THREE.Mesh( geometry, new THREE.MeshPhongMaterial( { color: color } ) );
+        mesh.position.set( x, y, z );
+        mesh.rotation.set( rx, ry, rz );
+        mesh.scale.set( s, s, s );
+
+        wgl_arrGolfs[num] = mesh;
+        wgl_scene.add( mesh );
+
+
+    }
+    function setGoafVisable() {
+        wgl_isGoafVisable = true;
+    }
+    function setGoafInvisable() {
+        wgl_isGoafVisable = false;
+    }
+
+
+
+    function addcube(cube,x,y,z){
+        //Cube
+
+        cube.position.x = x;
+        cube.position.y = y;
+        cube.position.z = z;
+        wgl_scene.add(cube);
+    }
+
+    /////20190605add begin
+    function initWaterHeightStation(shpDataJson){
+        for(var i in shpDataJson)
+        {
+            var cgeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+            var cmaterial = new THREE.MeshPhongMaterial({ // Required For Shadows
+                color: 0x00FFFF,
+                specular: 0x000000,
+                shininess: 100
+            });
+            var cube = new THREE.Mesh(cgeometry, cmaterial);
+            var x0 = (shpDataJson[i].x - wgl_minx - wgl_xHorizon/2)/ wgl_globle_scale;
+            var y0 = -(shpDataJson[i].y  - wgl_miny - wgl_yHorizon/2)/ wgl_globle_scale ;
+            var z0 = (shpDataJson[i].z*wgl_zScale )/ wgl_globle_scale;
+            addcube(cube,x0, z0,y0);
+            wgl_arrWaterHeightStation[i] = cube;
+        }
+    }
+    function setWaterHeightStationVisable() {
+        wgl_isWaterHeightStationVisable = true;
+    }
+    function setWaterHeightStationInvisable() {
+        wgl_isWaterHeightStationVisable = false;
+    }
+
+    function initFlowStation(shpDataJson){
+
+        for(var i in shpDataJson)
+        {
+            var cgeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+            var cmaterial = new THREE.MeshPhongMaterial({ // Required For Shadows
+                color: 0x00ff00,
+                specular: 0x000000,
+                shininess: 100
+            });
+            var cube = new THREE.Mesh(cgeometry, cmaterial);
+            var x0 = (shpDataJson[i].x - wgl_minx - wgl_xHorizon/2)/ wgl_globle_scale;
+            var y0 = -(shpDataJson[i].y  - wgl_miny - wgl_yHorizon/2)/ wgl_globle_scale ;
+            var z0 = (shpDataJson[i].z*wgl_zScale  )/ wgl_globle_scale;
+            addcube(cube,x0, z0,y0);
+            wgl_arrFlowStation[i] = cube;
+        }
+    }
+    function setFlowStationVisable() {
+        wgl_isFlowStationVisable = true;
+    }
+    function setFlowStationInvisable() {
+        wgl_isFlowStationVisable = false;
+    }
+
+    function initPumpStation(shpDataJson){
+        for(var i in shpDataJson)
+        {
+            var cgeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+            var cmaterial = new THREE.MeshPhongMaterial({ // Required For Shadows
+                color: 0xff0000,
+                specular: 0x000000,
+                shininess: 100
+            });
+            var cube = new THREE.Mesh(cgeometry, cmaterial);
+            var x0 = (shpDataJson[i].x - wgl_minx - wgl_xHorizon/2)/ wgl_globle_scale;
+            var y0 = -(shpDataJson[i].y  - wgl_miny - wgl_yHorizon/2)/ wgl_globle_scale ;
+            var z0 = (shpDataJson[i].z*wgl_zScale )/ wgl_globle_scale;
+            addcube(cube,x0, z0,y0);
+            wgl_arrPumpStation[i] = cube;
+        }
+    }
+    function setPumpStationVisable() {
+        wgl_isPumpStationVisable = true;
+    }
+    function setPumpStationInvisable() {
+        wgl_isPumpStationVisable = false;
+    }
+
+    function initGate(shpDataJson){
+        // console.log("222222");
+        // console.log(shpDataJson);
+        for(var i in shpDataJson)
+        {
+            var cgeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+            var cmaterial = new THREE.MeshPhongMaterial({ // Required For Shadows
+                color: 0xF4A460,
+                specular: 0x000000,
+                shininess: 100
+            });
+            var cube = new THREE.Mesh(cgeometry, cmaterial);
+            var x0 = (shpDataJson[i].x - wgl_minx - wgl_xHorizon/2)/ wgl_globle_scale;
+            var y0 = -(shpDataJson[i].y  - wgl_miny - wgl_yHorizon/2)/ wgl_globle_scale ;
+            var z0 = (shpDataJson[i].z*wgl_zScale  )/ wgl_globle_scale;
+            addcube(cube,x0, z0,y0);
+            wgl_arrGate[i] = cube;
+        }
+    }
+    function setGateVisable() {
+        wgl_isGateVisable = true;
+    }
+    function setGateInvisable() {
+        wgl_isGateVisable = false;
+    }
+
+
+    function initShelter(shpDataJson){
+
+        for(var i in shpDataJson)
+        {
+            var cgeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+            var cmaterial = new THREE.MeshPhongMaterial({ // Required For Shadows
+                color: 0xFFFF00,
+                specular: 0x000000,
+                shininess: 100
+            });
+            var cube = new THREE.Mesh(cgeometry, cmaterial);
+            var x0 = (shpDataJson[i].x - wgl_minx - wgl_xHorizon/2)/ wgl_globle_scale;
+            var y0 = -(shpDataJson[i].y  - wgl_miny - wgl_yHorizon/2)/ wgl_globle_scale ;
+            var z0 = (shpDataJson[i].z*wgl_zScale  )/ wgl_globle_scale;
+            addcube(cube,x0, z0,y0);
+            wgl_arrShelter[i] = cube;
+        }
+    }
+    function setShelterVisable() {
+        wgl_isShelterVisable = true;
+    }
+    function setShelterInvisable() {
+        wgl_isShelterVisable = false;
+    }
+
+    function setLineWaterHeightVisable() {
+        wgl_isLineWaterHeightVisable = true;
+        if(wgl_isLineFlowVisable == true)
+        {
+            wgl_isLineFlowVisable = false;
+        }
+    }
+    function setLineWaterHeightInvisable() {
+        wgl_isLineWaterHeightVisable = false;
+    }
+
+    function setLineFlowVisable() {
+        wgl_isLineFlowVisable = true;
+        if(wgl_isLineWaterHeightVisable == true)
+        {
+            wgl_isLineWaterHeightVisable = false;
+        }
+
+    }
+    function setLineFlowInvisable() {
+        wgl_isLineFlowVisable = false;
+    }
+    //////20190605add end
+
+    function setPersonnelLoctionVisable() {
+        wgl_isPersonnelLoationVisable = true;
+    }
+    function setPersonnelLoctionInvisable() {
+        wgl_isPersonnelLoationVisable = false;
+    }
+
+    function setHumanPositionVisable() {
+        wgl_isHumanPositionVisable = true;
+        // console.log("set Human visiable");
+        // console.log(wgl_arrHuman);
+        // console.log("true or false:   "+wgl_isHumanPositionVisable);
+    }
+    function setHumanPositionInvisable() {
+        wgl_isHumanPositionVisable = false;
+        // console.log("true or false:   "+wgl_isHumanPositionVisable);
+    }
+    function setHumanLocation(arrHuman) {
+
+        for(var j=0;j<wgl_arrHuman.length ;++j) {
+
+            wgl_arrHuman[j].position.x = -(arrHuman[i].x - wgl_minx)/ wgl_globle_scale;
+            wgl_arrHuman[j].position.y = (arrHuman[i].y  - wgl_miny)/ wgl_globle_scale ;
+            wgl_arrHuman[j].position.z = (arrHuman[i].z )/ wgl_globle_scale;
+
+        }
+    }
+
+    function setEvacPathVisable() {
+        // if(wgl_isEvacPathVisable)
+        //     return;
+        wgl_isEvacPathVisable = true;
+    }
+    function setEvacPathInvisable() {
+        // if(!wgl_isEvacPathVisable)
+        //     return;
+        wgl_isEvacPathVisable = false;
+    }
+
+
+
+    function addSphere(sphere,x,y,z){
+
+
+        sphere.position.x = x;
+        sphere.position.y = y;
+        sphere.position.z = z;
+        wgl_scene.add( sphere );
+    }
+    function setStratumLayersVisable(index) {
+        wgl_isStratumLayersVisable[index] = true;
+        if(document.getElementById("drillLayerVisible").checked)
+            wgl_isGeoDrillsVisible[index] = true;
+        // console.log("visable:   "+wgl_isStratumLayersVisable);
+    }
+    function setStratumLayersInvisable(index) {
+        wgl_isStratumLayersVisable[index] = false;
+        // if(document.getElementById("drillLayerVisible").checked)
+        wgl_isGeoDrillsVisible[index] = false;
+        // console.log("invisable:   "+wgl_isStratumLayersVisable);
+    }
+
+    function setProfilesVisable(name) {
+        wgl_isProfilesVisable[name] = true;
+        if(wgl_profilesLoad[name])
+            return;
+        loadProfile(wgl_profiles[name]);
+        wgl_profilesLoad[name] = true;
+    }
+    function setProfilesInvisable(name) {
+        wgl_isProfilesVisable[name] = false;
+        // console.log(JSON.stringify(wgl_isProfilesVisable));
+    }
+    function is_profile_visable(name) {
+        return wgl_isProfilesVisable[name];
+    }
+    function changeRenderingMode(flag)
+    {
+        wgl_RenderingMode = flag;
+        wgl_isChangeRenderingMode = true;
+    }
+    /*    function changeRendering()
+        {
+            if(wgl_isChangeRenderingMode)
+            {
+
+                var wgl_roadway_colors=[];
+                if(wgl_RenderingMode == 0)
+                    wgl_roadway_colors= webgl_webgl_getBufferGemetryColors(wgl_roadway3d.vertices,wgl_LayersYHorizon.maxy,wgl_Roadway3DYHorizon.miny);
+                else
+                    wgl_roadway_colors= webgl_webgl_getBufferGemetryColors(wgl_roadway3d.vertices,wgl_Roadway3DYHorizon.maxy,wgl_Roadway3DYHorizon.miny);
+
+                wgl_roadway_mesh.geometry.addAttribute( 'color', new THREE.Float32BufferAttribute( wgl_roadway_colors, 3 ) );
+
+                for(var i in wgl_layers)
+                {
+                    if(wgl_layers[i].uvs.length == 0 )
+                    {
+                        var layer_colors=[];
+                        if(wgl_RenderingMode == 0)
+                            layer_colors= webgl_webgl_getBufferGemetryColors(wgl_layers[i].vertices,wgl_LayersYHorizon.maxy,wgl_Roadway3DYHorizon.miny);
+                        else
+                            layer_colors= webgl_webgl_getBufferGemetryColors(wgl_layers[i].vertices,wgl_LayersYHorizon.maxy,wgl_LayersYHorizon.miny);
+
+                        wgl_arrStratumLayers[i].geometry.addAttribute( 'color', new THREE.Float32BufferAttribute( layer_colors, 3 ) );
+
+                    }
+
+                }
+            }
+
+            wgl_isChangeRenderingMode = false;
+        }*/
+    function getLayersYHorizon(wgl_layers){
+
+        var LayersYHorizon = {};
+        var wgl_tminy, wgl_tmaxy;
+        wgl_tminy = wgl_tmaxy = wgl_layers[0].vertices[1];
+
+        for(var i in wgl_layers)
+        {
+
+            for(var j=0; j<wgl_layers[i].vertices.length/3;++j)
+            {
+
+                if(wgl_layers[i].vertices[j*3+1] >= wgl_tmaxy)
+                {
+                    wgl_tmaxy = wgl_layers[i].vertices[j*3+1];
+                }
+
+
+                if(wgl_layers[i].vertices[j*3+1] <= wgl_tminy)
+                {
+                    wgl_tminy = wgl_layers[i].vertices[j*3+1];
+                }
+
+            }
+
+        }
+        LayersYHorizon.maxy = wgl_tmaxy;
+        LayersYHorizon.miny = wgl_tminy;
+        return LayersYHorizon;
+
+    }
+    
+    function webgl_getRoadway3DYHorizon(roadway3d){
+
+        var roadway3dYHorizon = {};
+        var wgl_tminy, wgl_tmaxy;
+        wgl_tminy = wgl_tmaxy = roadway3d.vertices[1];
+
+        for(var j=0; j<roadway3d.vertices.length/3;++j)
+        {
+
+            if(roadway3d.vertices[j*3+1] >= wgl_tmaxy)
+            {
+                wgl_tmaxy = roadway3d.vertices[j*3+1];
+            }
+
+
+            if(roadway3d.vertices[j*3+1] <= wgl_tminy)
+            {
+                wgl_tminy = roadway3d.vertices[j*3+1];
+            }
+
+        }
+
+
+        roadway3dYHorizon.maxy = wgl_tmaxy;
+        roadway3dYHorizon.miny = wgl_tminy;
+        return roadway3dYHorizon;
+
+    }
+
+    function webgl_webgl_getBufferGemetryColors(vertices, maxy, miny)
+    {
+        var wgl_layer_colors = [];
+        //console.log(maxy);
+        // console.log(miny);
+        var max_min = (maxy - miny) * 0.2;
+        //console.log(max_min);
+        for(var j=0; j<vertices.length;++j)
+        {
+
+            if (vertices[j * 3 + 1] - miny <= max_min * 2.0) {
+                wgl_layer_colors.push(0.0);
+                wgl_layer_colors.push((vertices[j * 3 + 1] - miny) / (max_min * 2.0));
+                wgl_layer_colors.push(1.0 - (vertices[j * 3 + 1] - miny) / (max_min * 2.0));
+            }
+            else {
+                if (vertices[j * 3 + 1] - miny <= max_min * 3.0) {
+                    wgl_layer_colors.push((vertices[j * 3 + 1] - max_min * 2.0 - miny) / max_min);
+                    wgl_layer_colors.push(1);
+                    wgl_layer_colors.push(0.0);
+                }
+                else {
+                    if (vertices[j * 3 + 1] - miny <= max_min * 4.0) {
+                        wgl_layer_colors.push(1);
+                        wgl_layer_colors.push(1.0 - 0.5 * (vertices[j * 3 + 1] - max_min * 3.0 - miny) / max_min);
+                        wgl_layer_colors.push(0.0);
+                    }
+                    else {
+                        wgl_layer_colors.push(1.0);
+                        wgl_layer_colors.push(0.5 - 0.5 * (vertices[j * 3 + 1] - max_min * 4.0 - miny) / max_min);
+                        wgl_layer_colors.push(0.0);
+                    }
+                }
+            }
+
+        }
+        return wgl_layer_colors;
+    }
+
+    function webgl_webgl_getBufferGemetryColorsRoadway(vertices, maxy, miny)
+    {
+        var wgl_layer_colors = [];
+        //console.log(maxy);
+        // console.log(miny);
+        var max_min = (maxy - miny) * 0.2;
+        //console.log(max_min);
+        for(var j=0; j<vertices.length;++j)
+        {
+            if(wgl_arrSegShow[wgl_vertexToSegement[0]] == 0 )
+            {
+                console.log("here");
+                wgl_layer_colors.push(1.0);
+                wgl_layer_colors.push(1.0);
+                wgl_layer_colors.push(1.0);
+            }else{
+                if (vertices[j * 3 + 1] - miny <= max_min * 2.0) {
+                    wgl_layer_colors.push(0.0);
+                    wgl_layer_colors.push((vertices[j * 3 + 1] - miny) / (max_min * 2.0));
+                    wgl_layer_colors.push(1.0 - (vertices[j * 3 + 1] - miny) / (max_min * 2.0));
+                }
+                else {
+                    if (vertices[j * 3 + 1] - miny <= max_min * 3.0) {
+                        wgl_layer_colors.push((vertices[j * 3 + 1] - max_min * 2.0 - miny) / max_min);
+                        wgl_layer_colors.push(1);
+                        wgl_layer_colors.push(0.0);
+                    }
+                    else {
+                        if (vertices[j * 3 + 1] - miny <= max_min * 4.0) {
+                            wgl_layer_colors.push(1);
+                            wgl_layer_colors.push(1.0 - 0.5 * (vertices[j * 3 + 1] - max_min * 3.0 - miny) / max_min);
+                            wgl_layer_colors.push(0.0);
+                        }
+                        else {
+                            wgl_layer_colors.push(1.0);
+                            wgl_layer_colors.push(0.5 - 0.5 * (vertices[j * 3 + 1] - max_min * 4.0 - miny) / max_min);
+                            wgl_layer_colors.push(0.0);
+                        }
+                    }
+                }
+            }
+
+
+
+        }
+        return wgl_layer_colors;
+    }
+
+    function webgl_loadRoadway(roadway3d)
+    {
+        let texture = new THREE.TextureLoader().load("../../images/1.bmp");
+        texture.repeat.set(2000,2000);
+        texture.wrapS = THREE.RepeatWrapping
+        texture.wrapT = THREE.RepeatWrapping;
+        var wgl_roadway_geometry = new THREE.BufferGeometry();
+        var wgl_roadway_colors = [];
+        // console.log(wgl_Roadway3DYHorizon);
+        wgl_roadway_colors= webgl_webgl_getBufferGemetryColorsRoadway(roadway3d.vertices,wgl_Roadway3DYHorizon.maxy,wgl_Roadway3DYHorizon.miny);
+
+        /* for(var i=0; i<wgl_roadway_vertices.length/3;++i) {
+
+             wgl_roadway_colors.push(0.5, 1, 0);
+         }*/
+        wgl_roadway_geometry.setIndex( roadway3d.indices );
+        wgl_roadway_geometry.addAttribute( 'position', new THREE.Float32BufferAttribute( roadway3d.vertices, 3 ) );
+        // wgl_roadway_geometry.addAttribute( 'normal', new THREE.Float32BufferAttribute( roadway3d.normals, 3 ) );
+        wgl_roadway_geometry.addAttribute( 'color', new THREE.Float32BufferAttribute( wgl_roadway_colors, 3 ) );
+        // wgl_roadway_geometry.color.dynamic = true;
+        wgl_roadway_geometry.computeBoundingBox();
+        wgl_roadway_geometry.computeVertexNormals();
+        wgl_roadway_geometry.addAttribute( 'uv', new THREE.BufferAttribute(
+            boxUvCom(wgl_roadway_geometry.getAttribute('position'),
+                wgl_roadway_geometry.getAttribute('normal'),
+                wgl_roadway_geometry.boundingBox.max,
+                wgl_roadway_geometry.boundingBox.min), 2 ) );
+        var wgl_roadway_material =  new THREE.MeshPhongMaterial({
+            // color:0xffffff,
+            side: THREE.DoubleSide,
+            //vertexColors: true,
+            flatShading:true,
+            shininess:30,
+            map:texture
+        });
+
+        var roadway_mesh = new THREE.Mesh( wgl_roadway_geometry, wgl_roadway_material );
+        wgl_roadwaysRendering.push(roadway_mesh);
+        wgl_scene.add( roadway_mesh );
+        console.log("巷道",roadway_mesh)
+
+        webgl_color_mine(1,1,1);
+        directLight.target = roadway_mesh;
+        directLight1.target = roadway_mesh;
+        // let wgl_roadway_material ;
+        //
+        // new THREE.TextureLoader().load( "../../images/666.jpg", function ( texture ) {
+        //
+        //     // texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+        //     // texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+        //     //wireframe: true;
+        //
+        //     //texture.matrixAutoUpdate = false; // default true; set to false to update texture.matrix manually
+        //
+        //     wgl_roadway_material= new THREE.MeshBasicMaterial({
+        //         // side: THREE.DoubleSide,
+        //         // transparent: true,
+        //         // wireframe:true,
+        //         map: texture
+        //     });
+        //     var roadway_mesh = new THREE.Mesh( wgl_roadway_geometry, wgl_roadway_material );
+        //     wgl_roadwaysRendering.push(roadway_mesh);
+        //     wgl_scene.add( roadway_mesh );
+        //
+        //     // webgl_color_mine(1,1,1);
+        //
+        //     //wgl_roadway_mesh = roadway_mesh;
+        //     // console.log(wgl_roadwaysRendering);
+        // });
+
+
+    }
+
+    function loadStratumLayer( wgl_layers)
+    {
+        console.log( wgl_layers);
+        let texture = new THREE.TextureLoader().load("../../images/3.bmp");
+        texture.repeat.set(20,20)
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+
+        for(var i=0;i< wgl_layers.length;i++)
+        {
+            var wgl_layer_geometry = new THREE.BufferGeometry();
+            wgl_layer_geometry.setIndex( wgl_layers[i].indices );
+
+            wgl_layer_geometry.addAttribute( 'position', new THREE.Float32BufferAttribute( wgl_layers[i].vertices, 3 ) );
+            wgl_layer_geometry.addAttribute( 'normal', new THREE.Float32BufferAttribute( wgl_layers[i].normals, 3 ) );
+
+            wgl_layer_geometry.computeBoundingBox();
+            wgl_layer_geometry.addAttribute( 'uv',
+                new THREE.BufferAttribute(boxUvCom(wgl_layer_geometry.getAttribute('position'),
+                    wgl_layer_geometry.getAttribute('normal'),
+                    wgl_layer_geometry.boundingBox.max,
+                    wgl_layer_geometry.boundingBox.min), 2 ) );
+            // if(wgl_layers[i].uvs.length >0 )
+
+            if(wgl_layer_geometry.getAttribute('uv')==null)
+            {
+                console.log("有uv数据")
+                //wgl_layer_geometry.addAttribute( 'uv', new THREE.Float32BufferAttribute( wgl_layers[i].uvs, 2 ) );
+
+                var wgl_layer_material;
+                // console.log(wgl_layers[i].texturePath + "  " + i);
+                //new THREE.TextureLoader().load( wgl_layers[i].texturePath, function ( texture ) {
+                new THREE.TextureLoader().load( "../../images/7.jpg", function ( texture ) {
+                    i--;            //调用后 i自动增加了 1，原因未知，待查
+                    // console.log(i);
+
+                    texture.repeat.set(20,20)
+                    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+                    texture.anisotropy = wgl_renderer.capabilities.getMaxAnisotropy();
+                    //wireframe: true;
+
+                    //texture.matrixAutoUpdate = false; // default true; set to false to update texture.matrix manually
+
+                    wgl_layer_material = new THREE.MeshBasicMaterial( {
+                        //map: texture,
+                        opacity :  1,
+                        transparent: true} );
+                    var mesh = new THREE.Mesh( wgl_layer_geometry, wgl_layer_material );
+
+                    //console.log(wgl_arrStratumLayers[i]);
+                    wgl_scene.add( mesh);
+                    wgl_arrStratumLayers[i] = mesh;
+                    wgl_isStratumLayersVisable.push(false);
+                    // console.log("11");
+                } );
+            }else{
+
+                var wgl_layer_colors = [];
+                if(wgl_RenderingMode == 0)
+                    wgl_layer_colors= webgl_webgl_getBufferGemetryColors(wgl_layers[i].vertices,wgl_LayersYHorizon.maxy,wgl_Roadway3DYHorizon.miny);
+                else
+                    wgl_layer_colors= webgl_webgl_getBufferGemetryColors(wgl_layers[i].vertices,wgl_LayersYHorizon.maxy,wgl_LayersYHorizon.miny);
+                // console.log(wgl_layer_colors);
+                // wgl_layer_geometry.addAttribute( 'color', new THREE.Float32BufferAttribute( wgl_layer_colors, 3 ) );
+
+                var wgl_layer_material = new THREE.MeshBasicMaterial( {
+                    color:getcolorbylayer(i),
+                    specular: 0x111111,
+                    shininess: 150,
+                    side: THREE.DoubleSide,
+                    depthFunc:THREE.LessDepth,
+                    depthTest:false,
+                    depthWrite:false
+                    //map: texture
+                    // vertexColors: THREE.VertexColors,
+                    // ***** Clipping setup (material): *****
+                    // clippingPlanes: [ localPlane ],
+                    // clipShadows: true
+                } );
+
+                var mesh = new THREE.Mesh( wgl_layer_geometry, wgl_layer_material );
+                mesh.renderOrder=100-i;
+                wgl_scene.add( mesh);
+                wgl_arrStratumLayers[i] = mesh;
+                wgl_isStratumLayersVisable.push(false);
+                // console.log("22");
+            }
+
+        }
+
+    }
+    
+    function setLayersDepth(flag)
+    {
+        for(let i=0;i < wgl_arrStratumLayers.length;++i)
+        {
+            wgl_arrStratumLayers[i].material.depthTest= flag;
+            wgl_arrStratumLayers[i].material.depthWrite= flag;
+        }
+
+    }
+
+
+    function loadProfile(profile)
+    {
+        // console.log("绘制剖面: "+profile.name);
+        var profileGeometry = new THREE.BufferGeometry();
+        profileGeometry.setIndex( profile.indices );
+        profileGeometry.addAttribute( 'position', new THREE.Float32BufferAttribute( profile.vertices, 3 ) );
+        profileGeometry.addAttribute( 'normal', new THREE.Float32BufferAttribute( profile.normals, 3 ) );
+        profileGeometry.addAttribute( 'uv', new THREE.Float32BufferAttribute( profile.uvs, 2 ) );
+
+        var profilematerial;
+        new THREE.TextureLoader().load( profile.texturePath, function ( texture ) {
+
+            texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+            texture.anisotropy = wgl_renderer.capabilities.getMaxAnisotropy();
+
+
+            //texture.matrixAutoUpdate = false; // default true; set to false to update texture.matrix manually
+
+            profilematerial = new THREE.MeshBasicMaterial( {
+                // wireframe: true,
+                map: texture,
+                side: THREE.DoubleSide
+            });
+            var profilemesh = new THREE.Mesh( profileGeometry, profilematerial );
+            //profilemesh.rotation.x = -0.5 * Math.PI;
+            //profilemesh.receiveShadow = true;
+            // profilemesh.position.x = 0;
+            // profilemesh.position.y = -5;
+            // profilemesh.position.z = 0;
+            console.log(profilemesh);
+            wgl_scene.add( profilemesh);
+            wgl_arrProfiles[profile.name] = profilemesh;
+            // wgl_isProfilesVisable.push(true);
+            wgl_isProfilesVisable[profile.name] = true;
+        } );
+    }
+
+    function wgl_load_3D_faluts() {
+        $.ajax({
+            type: "POST",
+            url: "/get_3D_faluts",
+            async: false,
+            success: function (da) {
+                wgl_faults = da;
+                // console.log(wgl_faults);
+            }
+        })
+    }
+
+    function loadFaults( wgl_layers)
+    {
+        // //console.log("length"+ wgl_layers.length);
+
+        for(var i=0;i< wgl_layers.length;i++)
+        {
+
+            var wgl_layer_geometry = new THREE.BufferGeometry();
+            wgl_layer_geometry.setIndex( wgl_layers[i].indices );
+            wgl_layer_geometry.addAttribute( 'position', new THREE.Float32BufferAttribute( wgl_layers[i].vertices, 3 ) );
+            wgl_layer_geometry.addAttribute( 'normal', new THREE.Float32BufferAttribute( wgl_layers[i].normals, 3 ) );
+
+            if(wgl_layers[i].uvs.length >0 )
+            {
+                wgl_layer_geometry.addAttribute( 'uv', new THREE.Float32BufferAttribute( wgl_layers[i].uvs, 2 ) );
+
+                var wgl_layer_material;
+                // //console.log(wgl_layers[i].texturePath + "  " + i);
+                new THREE.TextureLoader().load( wgl_layers[i].texturePath, function ( texture ) {
+                    i--;            //调用后 i自动增加了 1，原因未知，待查
+                    // //console.log(i);
+
+                    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+                    texture.anisotropy = wgl_renderer.capabilities.getMaxAnisotropy();
+                    //wireframe: true;
+
+                    //texture.matrixAutoUpdate = false; // default true; set to false to update texture.matrix manually
+
+                    wgl_layer_material = new THREE.MeshBasicMaterial( { map: texture,opacity :  0.2,
+                        transparent: true} );
+                    var mesh = new THREE.Mesh( wgl_layer_geometry, wgl_layer_material );
+
+
+                    wgl_scene.add( mesh);
+                    wgl_arrFaults[i] = mesh;
+                    wgl_isFaultsVisable.push(true);
+                    // //console.log("11");
+                } );
+            }else{
+
+                var wgl_layer_colors = [];
+                // if(wgl_RenderingMode == 0)
+                //     wgl_layer_colors= webgl_webgl_getBufferGemetryColors(wgl_layers[i].vertices,wgl_LayersYHorizon.maxy,wgl_Roadway3DYHorizon.miny);
+                // else
+                //     wgl_layer_colors= webgl_webgl_getBufferGemetryColors(wgl_layers[i].vertices,wgl_LayersYHorizon.maxy,wgl_LayersYHorizon.miny);
+                var color = new THREE.Color();
+                // color.setRGB(0.8824,0.6784,0.3686);
+                color.setRGB(1.0,0.0,0.0);
+                for(var j=0;j<wgl_layers[i].vertices.length;++j)
+                {
+
+                    wgl_layer_colors.push(color.r,color.g,color.b);
+
+                }
+                // //console.log(wgl_layer_colors);
+                wgl_layer_geometry.addAttribute( 'color', new THREE.Float32BufferAttribute( wgl_layer_colors, 3 ) );
+                //wgl_layer_geometry.color.dynamic = true;
+                var wgl_layer_material = new THREE.MeshBasicMaterial( {
+                    // specular: 0x111111, shininess: 250,
+                    side: THREE.DoubleSide, vertexColors: THREE.VertexColors
+                } );
+                var mesh = new THREE.Mesh( wgl_layer_geometry, wgl_layer_material );
+
+                wgl_scene.add( mesh);
+                wgl_arrFaults[i] = mesh;
+                wgl_isFaultsVisable.push(false);
+                // //console.log("22");
+            }
+
+        }
+
+    }
+
+    function setFaultsAllVisable() {
+        for(let i=0;i<wgl_arrFaults.length;i++)
+            setFaultsVisable(i);
+    }
+    function setFaultsAllInvisable() {
+        for(let i=0;i<wgl_arrFaults.length;i++)
+            setFaultsInvisable(i);
+    }
+    function setFaultsVisable(index) {
+
+        wgl_isFaultsVisable[index] = true;
+
+    }
+    function setFaultsInvisable(index) {
+
+        wgl_isFaultsVisable[index] = false;
+
+    }
+
+
+    function wgl_load_3D_drills() {
+        $.ajax({
+            type: "POST",
+            url: "/wgl_load_3D_drills",
+            async: false,
+            success: function (da) {
+                wgl_drills = da;
+                // console.log(wgl_drills);
+            }
+        })
+    }
+
+    function wgl_deleteDrill(layerLocationName)
+    {
+        if(wgl_arrDrills[layerLocationName]==undefined)
+        {
+            console.log("删除钻孔未成功！")
+            return;
+        }
+        for(var k=0;k<wgl_arrDrills[layerLocationName].length;++k)
+        {
+            wgl_scene.remove(wgl_arrDrills[layerLocationName][k]);
+        }
+        for(var k=0;k<wgl_arrMatDrills[layerLocationName].length;++k)
+        {
+            wgl_scene.remove(wgl_arrMatDrills[layerLocationName][k]);
+        }
+    }
+
+    function deleteDrill( drillName, fun) {
+
+        wgl_deleteDrill(drillName);
+        delete wgl_arrDrills[drillName];
+        delete wgl_arrMatDrills[drillName];
+        // console.log(wgl_arrDrills);
+
+        $.ajax({
+            url:"/delete_grouting_drill",//要请求的服务器url
+            data:{
+                drillName:drillName,
+
+            },//第一个name对应的是后端request.getParameter("name")的name、第二个name对应的是此js中的var name = $("#name").val();的name
+            async:true,//是否是异步请求
+            cache:false,//是否缓存结果
+            type:"POST",//请求方式
+            dataType:"text",//服务器返回什么类型数据 text xml javascript json(javascript对象)
+            traditional:true,
+            success:function(result){//函数会在服务器执行成功后执行，result就是服务器返回结果
+                // console.log(result);
+                fun();
+            },
+            error:function(jqXHR, textStatus, errorThrown) {
+
+            }
+        });
+
+    }
+
+    function wgl_drillCheck( layerLocationName , upShift,  downShift, fun) {
+
+        $.ajax({
+            url:"/grouting_dirll_check",//要请求的服务器url
+            data:{
+                layerLocationName:layerLocationName,
+                upShift:upShift,
+                downShift:downShift
+            },//第一个name对应的是后端request.getParameter("name")的name、第二个name对应的是此js中的var name = $("#name").val();的name
+            // async:false,//是否是异步请求
+            cache:false,//是否缓存结果
+            type:"POST",//请求方式
+            dataType:"text",//服务器返回什么类型数据 text xml javascript json(javascript对象)
+            traditional:true,
+            success:function(result){//函数会在服务器执行成功后执行，result就是服务器返回结果
+                var jsonObj = JSON.parse(result);
+                // console.log(jsonObj);
+                initDrills(jsonObj);
+                alert("计算完成，可以显示三维钻孔及检验信息。");
+                fun(jsonObj);
+            },
+            error:function(jqXHR, textStatus, errorThrown) {
+
+            }
+        });
+
+    }
+
+
+    function getDrillsXYZHorizon(vertices){
+        wgl_minx = wgl_maxx = vertices[0].x;
+        wgl_miny = wgl_maxy = vertices[0].y;
+        wgl_minz = wgl_maxz = vertices[0].z;
+
+        for(var i in vertices)
+        {
+            if(vertices[i].x >= wgl_maxx)
+            {
+                wgl_maxx = vertices[i].x;
+            }
+            if(vertices[i].y >= wgl_maxy)
+            {
+                wgl_maxy = vertices[i].y;
+            }
+            if(vertices[i].z >= wgl_maxz)
+            {
+                wgl_maxz = vertices[i].z;
+            }
+            if(vertices[i].x <= wgl_minx)
+            {
+                wgl_minx = vertices[i].x;
+            }
+            if(vertices[i].y <= wgl_miny)
+            {
+                wgl_miny = vertices[i].y;
+            }
+            if(vertices[i].z <= wgl_minz)
+            {
+                wgl_minz = vertices[i].z;
+            }
+        }
+        wgl_xHorizon = wgl_maxx - wgl_minx;
+        wgl_yHorizon = wgl_maxy - wgl_miny;
+        wgl_zHorizon = wgl_maxz - wgl_minz;
+    }
+
+    function initDrills(wgl_tmpDrills){
+
+        let texture = new THREE.TextureLoader().load("../../images/1111.png");
+        var color = new THREE.Color();
+        // console.log(wgl_tmpDrills)
+        // console.log(wgl_tmpDrills.length );
+        // console.log(wgl_drills.length);
+        for (var i= 0 ;i< wgl_tmpDrills.length ;++i) {
+
+            var arrDirllsIndex = wgl_tmpDrills[i].name;
+            if(wgl_arrDrills[arrDirllsIndex]!=undefined)
+            {
+                // console.log("deleteDrills");
+                wgl_deleteDrill(arrDirllsIndex);
+            }else{
+                // console.log("444444444");
+            }
+            wgl_arrDrills[arrDirllsIndex]= new Array();
+            wgl_arrMatDrills[arrDirllsIndex] = new Array();
+            // getDrillsXYZHorizon(wgl_tmpDrills[i].drillVertices);
+
+
+            for(var j=0;j<wgl_tmpDrills[i].vertices.length/3-1;++j)
+            {
+                var positions1 = [];
+                var colors1 = [];
+                // console.log(wgl_tmpDrills[i].drillVertices[j].x)
+                color.setHSL(1.0, 1.0, 1.0);
+
+
+                // var x0 = (wgl_tmpDrills[i].drillVertices[j].x - wgl_minx- wgl_xHorizon/2)/ wgl_globle_scale;
+                // var y0 = -(wgl_tmpDrills[i].drillVertices[j].y  - wgl_miny- wgl_yHorizon/2)/ wgl_globle_scale ;
+                // var z0 = (wgl_tmpDrills[i].drillVertices[j].z*wgl_zScale )/ wgl_globle_scale;
+                var tx0 = wgl_tmpDrills[i].vertices[j*3];
+                var ty0 = wgl_tmpDrills[i].vertices[j*3+1];
+                var tz0 = wgl_tmpDrills[i].vertices[j*3+2];
+                var tx1 = wgl_tmpDrills[i].vertices[(j+1)*3];
+                var ty1 = wgl_tmpDrills[i].vertices[(j+1)*3+1];
+                var tz1 = wgl_tmpDrills[i].vertices[(j+1)*3+2];
+
+
+                var geometry1 = new THREE.Geometry();
+                geometry1.vertices.push( new THREE.Vector3( tx0,  tz0,  ty0));
+                geometry1.vertices.push( new THREE.Vector3(tx1,  tz1,  ty1));
+
+                if(wgl_tmpDrills[i].incorrectVerticesIndex.length==0)
+                {
+                    // console.log("here1")
+                    wgl_arrMatDrills[arrDirllsIndex][j] = new THREE.LineBasicMaterial({
+                        color: 0xffffff,
+                    });
+                }else{
+                    // console.log(wgl_tmpDrills[i].incorrectVerticesIndex[j])
+                    if(wgl_tmpDrills[i].incorrectVerticesIndex[j]==0)
+                    {
+                        wgl_arrMatDrills[arrDirllsIndex][j] = new THREE.LineBasicMaterial({
+                            color: 0xff0000,
+                        });
+
+                    }else{
+                        wgl_arrMatDrills[arrDirllsIndex][j] = new THREE.LineBasicMaterial({
+                            color: 0x00ff00,
+                        });
+
+                    }
+                }
+                // var colors = [];
+                // color = {"r":0.0,"g":0.0,"b":0.0};
+                // wgl_arrDrills[arrDirllsIndex][j].material.color = color;
+                var line1 = new THREE.Line(geometry1,  wgl_arrMatDrills[arrDirllsIndex][j]);
+                wgl_arrDrills[arrDirllsIndex][j] = line1;
+                // console.log(wgl_arrDrills[arrDirllsIndex][j])
+                wgl_scene.add(wgl_arrDrills[arrDirllsIndex][j]);
+                wgl_arrDrills[arrDirllsIndex][j].visible = wgl_tmpDrills[i].visibleStatus;
+            }
+
+        }
+
+    }
+
+
+
+    function setDrillsVisible(name)
+    {
+        var visible = true;
+        if(wgl_arrDrills[name][0].visible===false)
+        {
+            visible = true;
+        }else{
+            visible = false;
+        }
+        // console.log(visible);
+
+        for(var i=0;i<wgl_arrDrills[name].length;++i)
+        {
+            wgl_arrDrills[name][i].visible = visible;
+            // console.log( wgl_arrDrills[name][i].visible);
+
+        }
+        $.ajax({
+            url:"/setDrillVisibleStatus",//要请求的服务器url
+            data:{
+                drillName:name,
+
+            },//第一个name对应的是后端request.getParameter("name")的name、第二个name对应的是此js中的var name = $("#name").val();的name
+            async:true,//是否是异步请求
+            cache:false,//是否缓存结果
+            type:"POST",//请求方式
+            dataType:"text",//服务器返回什么类型数据 text xml javascript json(javascript对象)
+            traditional:true,
+            success:function(result){//函数会在服务器执行成功后执行，result就是服务器返回结果
+                // console.log(result);
+                // fun();
+            },
+            error:function(jqXHR, textStatus, errorThrown) {
+
+            }
+        });
+    }
+
+
+    function wgl_load_3D_LayerLocation() {
+        $.ajax({
+            type: "POST",
+            url: "/get_3D_layerLocations",
+            async: false,
+            success: function (da) {
+                wgl_layerLocations = da;
+
+            }
+        })
+    }
+
+
+
+    function loadLayerLocation( wgl_layers)
+    {
+        // console.log("length"+ wgl_layers.length);
+
+        for(var i=0;i< wgl_layers.length;i++)
+        {
+            var name = wgl_layers[i].name;
+            var wgl_layer_geometry = new THREE.BufferGeometry();
+            wgl_layer_geometry.setIndex( wgl_layers[i].indices );
+            wgl_layer_geometry.addAttribute( 'position', new THREE.Float32BufferAttribute( wgl_layers[i].vertices, 3 ) );
+            wgl_layer_geometry.addAttribute( 'normal', new THREE.Float32BufferAttribute( wgl_layers[i].normals, 3 ) );
+
+            if(wgl_layers[i].uvs.length >0 )
+            {
+                console.log('使用了第一个')
+                wgl_layer_geometry.addAttribute( 'uv', new THREE.Float32BufferAttribute( wgl_layers[i].uvs, 2 ) );
+
+                var wgl_layer_material;
+                // console.log(wgl_layers[i].texturePath + "  " + i);
+                new THREE.TextureLoader().load( wgl_layers[i].texturePath, function ( texture ) {
+                    i--;            //调用后 i自动增加了 1，原因未知，待查
+                    // console.log(i);
+
+                    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+                    texture.anisotropy = wgl_renderer.capabilities.getMaxAnisotropy();
+                    //wireframe: true;
+
+                    //texture.matrixAutoUpdate = false; // default true; set to false to update texture.matrix manually
+
+                    wgl_layer_material = new THREE.MeshBasicMaterial( { map: texture,opacity :  0.2,
+                        transparent: true} );
+                    var mesh = new THREE.Mesh( wgl_layer_geometry, wgl_layer_material );
+
+                    //console.log(wgl_arrStratumLayers[i]);
+                    wgl_scene.add( mesh);
+                    wgl_arrLayerLocations[name] = mesh;
+                    wgl_arrLayerLocations[name].visible = false;
+                    // console.log("11");
+                } );
+            }else{
+
+                console.log('使用了第二个')
+                var wgl_layer_colors = [];
+                if(wgl_RenderingMode === 0)
+                    wgl_layer_colors= webgl_webgl_getBufferGemetryColors(wgl_layers[i].vertices,wgl_LayersYHorizon.maxy,wgl_Roadway3DYHorizon.miny);
+                else
+                    wgl_layer_colors= webgl_webgl_getBufferGemetryColors(wgl_layers[i].vertices,wgl_LayersYHorizon.maxy,wgl_LayersYHorizon.miny);
+                // console.log(wgl_layer_colors);
+                wgl_layer_geometry.addAttribute( 'color', new THREE.Float32BufferAttribute( wgl_layer_colors, 3 ) );
+                //wgl_layer_geometry.color.dynamic = true;
+                var wgl_layer_material = new THREE.MeshPhongMaterial( {
+                    specular: 0x111111,
+                    shininess: 250,
+                    side: THREE.DoubleSide,
+                    vertexColors: THREE.VertexColors
+                } );
+
+                var mesh = new THREE.Mesh( wgl_layer_geometry, wgl_layer_material );
+
+                wgl_arrLayerLocations[name] = mesh;
+                // wgl_isLayerLocatoinsVisable.push(true);
+                wgl_arrLayerLocations[name].visible = false;
+                wgl_scene.add( mesh);
+                // console.log("22");
+            }
+
+        }
+
+    }
+    function setLayerLocationVisable(name) {
+        // console.log(name+"visible");
+        wgl_arrLayerLocations[name].visible= true;
+
+    }
+    function setLayerLocationInvisable(name) {
+        // console.log(name+"invisible");
+        // console.log(wgl_arrLayerLocations);
+        wgl_arrLayerLocations[name].visible= false;
+
+    }
+    function initLayerLocationShift( wgl_layers,shift)
+    {
+        // console.log("length"+ wgl_layers.length);
+        var tmpwgl_varLayerLocationShift;
+        var wgl_layer_geometry = new THREE.BufferGeometry();
+        wgl_layer_geometry.setIndex( wgl_layers.indices );
+        var tmpVertices=[];
+        for(var i=0;i<wgl_layers.vertices.length;++i)
+        {
+            var value =wgl_layers.vertices[i];
+            if(i%3==1)
+                value +=shift*wgl_zScale/ wgl_globle_scale;
+            tmpVertices[i] = value;
+        }
+        wgl_layer_geometry.addAttribute( 'position', new THREE.Float32BufferAttribute(tmpVertices , 3 ) );
+        wgl_layer_geometry.addAttribute( 'normal', new THREE.Float32BufferAttribute( wgl_layers.normals, 3 ) );
+
+        if(wgl_layers.uvs.length >0 )
+        {
+            wgl_layer_geometry.addAttribute( 'uv', new THREE.Float32BufferAttribute( wgl_layers.uvs, 2 ) );
+
+            var wgl_layer_material;
+            // console.log(wgl_layers.texturePath + "  " + i);
+            new THREE.TextureLoader().load( wgl_layers.texturePath, function ( texture ) {
+                i--;            //调用后 i自动增加了 1，原因未知，待查
+                // console.log(i);
+
+                texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+                texture.anisotropy = wgl_renderer.capabilities.getMaxAnisotropy();
+                //wireframe: true;
+
+                //texture.matrixAutoUpdate = false; // default true; set to false to update texture.matrix manually
+
+                wgl_layer_material = new THREE.MeshBasicMaterial( { map: texture,opacity :  0.2,
+                    transparent: true} );
+                var mesh = new THREE.Mesh( wgl_layer_geometry, wgl_layer_material );
+
+                //console.log(wgl_arrStratumLayers[i]);
+
+                tmpwgl_varLayerLocationShift = mesh;
+
+                // console.log("11");
+            } );
+        }else{
+
+            var wgl_layer_colors = [];
+            if(wgl_RenderingMode == 0)
+                wgl_layer_colors= webgl_webgl_getBufferGemetryColors(wgl_layers.vertices,wgl_LayersYHorizon.maxy,wgl_Roadway3DYHorizon.miny);
+            else
+                wgl_layer_colors= webgl_webgl_getBufferGemetryColors(wgl_layers.vertices,wgl_LayersYHorizon.maxy,wgl_LayersYHorizon.miny);
+            // console.log(wgl_layer_colors);
+            wgl_layer_geometry.addAttribute( 'color', new THREE.Float32BufferAttribute( wgl_layer_colors, 3 ) );
+            //wgl_layer_geometry.color.dynamic = true;
+
+            // transparent:true, opacity:0.6,
+            var wgl_layer_material = new THREE.MeshPhongMaterial( {
+                specular: 0x111111, shininess: 250,
+                side: THREE.DoubleSide, vertexColors: THREE.VertexColors
+            } );
+
+            var mesh = new THREE.Mesh( wgl_layer_geometry, wgl_layer_material );
+            tmpwgl_varLayerLocationShift = mesh;
+
+            // console.log("22");
+        }
+        return  tmpwgl_varLayerLocationShift;
+
+    }
+
+    function setLayerLocationUpShiftVisible(layerLocationName,shift)
+    {
+        if(wgl_isLayerLocatoinsUpShiftVisable == true)
+        {
+            wgl_isLayerLocatoinsUpShiftVisable =false;
+            wgl_varLayerLocationUpShift.visible = false;
+        }else{
+            for(var i=0;i< wgl_layerLocations.length;++i)
+            {
+                if(wgl_layerLocations[i].name==layerLocationName)
+                {
+                    if(wgl_varLayerLocationUpShift == null )
+                    {
+                        wgl_varLayerLocationUpShift = initLayerLocationShift(wgl_layerLocations[i],shift);
+                        wgl_scene.add(wgl_varLayerLocationUpShift);
+
+                    }else{
+                        wgl_varLayerLocationUpShift = initLayerLocationShift(wgl_layerLocations[i],shift);
+                        wgl_scene.add(wgl_varLayerLocationUpShift);
+
+                    }
+                    wgl_isLayerLocatoinsUpShiftVisable = true;
+                    wgl_varLayerLocationUpShift.visible = true;
+                }
+
+            }
+        }
+
+    }
+
+    function setLayerLocationDownShiftVisible(layerLocationName,shift)
+    {
+        if(wgl_isLayerLocatoinsDownShiftVisable == true)
+        {
+            wgl_isLayerLocatoinsDownShiftVisable =false;
+            wgl_varLayerLocationDownShift.visible = false;
+        }else{
+            for(var i=0;i< wgl_layerLocations.length;++i)
+            {
+
+                if( wgl_layerLocations[i].name==layerLocationName)
+                {
+                    if(wgl_varLayerLocationDownShift==null)
+                    {
+                        // console.log("0000000000");
+                        wgl_varLayerLocationDownShift = initLayerLocationShift(wgl_layerLocations[i],shift);
+                        wgl_scene.add(wgl_varLayerLocationDownShift);
+                        // console.log(wgl_scene);
+                    }else{
+                        // console.log("here9999999999");
+                        wgl_scene.remove(wgl_varLayerLocationDownShift);
+                        wgl_varLayerLocationDownShift = initLayerLocationShift(wgl_layerLocations[i],shift);
+                        wgl_scene.add(wgl_varLayerLocationDownShift);
+                        // console.log(wgl_scene);
+                    }
+                    wgl_isLayerLocatoinsDownShiftVisable = true;
+                    wgl_varLayerLocationDownShift.visible = true;
+                }
+
+            }
+        }
+    }
+
+    function onWindowResize() {
+
+        wgl_camera.aspect = webgl_width / webgl_height;
+        wgl_camera.updateProjectionMatrix();
+
+        wgl_renderer.setSize( webgl_width, webgl_height );
+
+
+    }
+
+    function initMicroSemic(wgl_microseismic){
+
+        // console.log("1111111111111");
+        // console.log(wgl_microseismic);
+        for(var i in wgl_microseismic )
+        {
+            var geometry = new THREE.SphereBufferGeometry( (wgl_microseismic[i].level+5.0)/100.0, 32, 32 );
+            var material = new THREE.MeshBasicMaterial( {color: 0xffff00} );
+            material.color.r = wgl_microseismic[i].color.r*0.00392157;
+            material.color.g = wgl_microseismic[i].color.g*0.00392157;
+            material.color.b = wgl_microseismic[i].color.b*0.00392157;
+            var sphere = new THREE.Mesh( geometry, material );
+            wgl_arrMicroSeismic[i] = sphere;
+            var x0 = (wgl_microseismic[i].coor.x - wgl_minx- wgl_xHorizon/2)/ wgl_globle_scale;
+            var y0 = -(wgl_microseismic[i].coor.y  - wgl_miny- wgl_yHorizon/2)/ wgl_globle_scale ;
+            var z0 = (wgl_microseismic[i].coor.z *wgl_zScale )/ wgl_globle_scale;
+
+            addSphere(wgl_arrMicroSeismic[i],x0,z0,y0);
+        }
+    }
+    function initMicroSemicFromDB(wgl_microseismic){
+
+        // console.log("1111111111111");
+        // console.log(wgl_microseismic);
+        for(var i in wgl_microseismic )
+        {
+            var geometry = new THREE.SphereBufferGeometry( (wgl_microseismic[i].magnitude+5.0)/100.0, 32, 32 );
+            var material = new THREE.MeshBasicMaterial( {color: 0xffff00} );
+            var sphere = new THREE.Mesh( geometry, material );
+            wgl_arrMicroSeismic[i] = sphere;
+            addSphere(wgl_arrMicroSeismic[i],wgl_microseismic[i].x,wgl_microseismic[i].z,wgl_microseismic[i].y);
+        }
+    }
+    function setMicroSemicVisable() {
+        if(wgl_microseismic_init)
+            wgl_isMicroSeismicVisable = true;
+        else{
+            // console.log("init and set visible.");
+            // initMicroSemic(wgl_microseismic);
+            let time = new Date().getTime();
+            wgl_load_3D_microse(time);
+            initMicroSemicFromDB(wgl_microseismic);
+            wgl_microseismic_init = true;
+            wgl_isMicroSeismicVisable = true;
+        }
+
+    }
+    function setMicroSemicInvisable() {
+        wgl_isMicroSeismicVisable = false;
+        wgl_microseismic_init = false;
+    }
+    function getdrillsVertices()
+    {
+        // var wgl_currentInrushTime = id;
+
+        $.ajax({
+            type:"post",
+            url:"/get_geodrillsVertex",
+            // data: wgl_currentInrushTime ,
+            async: false,
+            traditional: true,
+            success:function (data) {
+
+                console.log("drill sucsss~");
+                // arrVertices = JSON.parse(data);
+                // console.log(data);
+                drills=data;
+                //console.log(drills);
+
+            },
+            error:function () {
+                console.log();
+            }
+
+        });
+    }
+    // function rangeFinding(){
+    //     console.log("wgl_renderer---3397")
+    //     console.log(wgl_renderer)
+    //     wgl_renderer.domElement.addEventListener('click', onClick, false);
+    // }
+    function onDocumentMouseMove(event) {
+        event.preventDefault()
+        mouse.x = (event.offsetX / wgl_renderer.domElement.offsetWidth) * 2 - 1
+        mouse.y = -(event.offsetY / wgl_renderer.domElement.offsetHeight) * 2 + 1
+        if (drawingLine) {
+            raycaster.setFromCamera(mouse, camera)
+            intersects = raycaster.intersectObjects(scene.children)
+            if (intersects.length === 0) return
+            let line = markers[lineId][2]
+            line.computeLineDistances()
+            updateLinePoint(line, intersects[0].point, 3)
+
+        }
+    }
+    function draggablePoint(el, id) {
+        let timeId = null
+        let index = pointsDom[id].findIndex(item => item === el)
+        let line = markers[id][2]
+        el.addEventListener('mousedown', (e) => {
+            timeId = setTimeout(() => {
+                console.log('长按')
+                changeMaterial(line)
+                //变虚线
+                timeId = null
+                //长按监听移动
+                document.addEventListener('mousemove', handlePointMove)
+            }, 100);
+            document.addEventListener('mouseup', handlePointUp)
+        })}
+    function handlePointMove() {
+        //打出射线
+        raycaster.setFromCamera(mouse, camera)
+        intersects = raycaster.intersectObjects(scene.children)
+        //排除含有lineId的物体
+        intersects = intersects.filter(item => !('lineId' in item.object))
+        if (intersects.length === 0) return
+        //变更线段两端点的位置
+        let arrayStart = index && 3
+        updateLinePoint(line, intersects[0].point, arrayStart)
+    }
+
+
+    function handlePointUp() {
+        if (timeId) {
+            console.log('点击')
+            clearTimeout(timeId)
+            timeId = null
+        } else {
+            changeMaterial(line)
+        }
+        document.removeEventListener('mouseup', handlePointUp)
+        document.removeEventListener('mousemove', handlePointMove)
+    }
+
+
+    function changeMaterial(object3d) {
+        let temp = object3d.oldMaterial
+        object3d.oldMaterial = object3d.material
+        object3d.material = temp
+    }
+
+    function updateLinePoint(line, point, arrayIndex) {
+        const positions = line.geometry.attributes.position.array
+        positions[arrayIndex] = point.x
+        positions[arrayIndex + 1] = point.y
+        positions[arrayIndex + 2] = point.z
+        line.geometry.attributes.position.needsUpdate = true
+    }
+    function onClick() {
+        console.log("===============================")
+
+        if(isActive){
+            console.log("进入画线——————")
+            raycaster.setFromCamera(mouse, wgl_camera)
+            intersects = raycaster.intersectObjects(wgl_scene.children)
+            console.log(intersects)
+            if (!drawingLine) {
+                console.log("进入文字——————")
+
+                //加入距离文字
+                let text1 = document.createElement('span')
+                text1.classList.add("distance");
+                text1.style.position = 'absolute';
+                text1.style.top = '0';
+                text1.style.color = 'red';
+                text1.style.pointerEvents = 'none';
+                text1.style.zIndex='9999';
+                let text2 = text1.cloneNode();
+                document.body.appendChild(text1);
+                document.body.appendChild(text2);
+                textDoms[lineId] = [text1, text2];
+
+                //加入2d的点
+                let point2d1 = document.createElement('div')
+                point2d1.classList.add("distance")
+                point2d1.style.position = 'absolute'
+                point2d1.style.zIndex='9999';
+                point2d1.style.width = '30px'
+                point2d1.style.height = '30px'
+                point2d1.style.borderRadius = '50%'//弧度
+                point2d1.style.pointerEvents = 'none'
+                point2d1.style.cursor = 'pointer'
+                point2d1.style.transform = 'translate(-50%,-50%)'
+                point2d1.style.top = '0'
+                point2d1.style.background = 'orange'
+                let point2d2 = point2d1.cloneNode()
+                document.body.appendChild(point2d1)
+                document.body.appendChild(point2d2)
+                pointsDom[lineId] = [point2d1, point2d2]
+                //加入3d中的两圆球
+                let marker1 = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.1, 32, 16),
+                    new THREE.MeshBasicMaterial({
+                        color: 0xff5555,
+                    })
+                );
+                let marker2 = marker1.clone()
+                markers[lineId] = [marker1, marker2]
+                wgl_scene.add(marker1)
+                wgl_scene.add(marker2)
+                //构建虚线
+
+                let points = [];
+                points.push(intersects[0].point);
+                points.push(intersects[0].point.clone());
+                console.log(points)
+                const geometry = new THREE.BufferGeometry().setFromPoints(points)
+                let line = new THREE.LineSegments(geometry,
+                    new THREE.LineDashedMaterial({
+                        color: 0xff5555,
+                        transparent: true,
+                        depthTest: false,
+                        dashSize: 0.1,//短划线的大小
+                        gapSize: 0.1//短划线之间的距离
+                    })
+                )
+                //这行代码很关键,让屏幕外区域的点,正确显示
+                line.frustumCulled = false //视锥体外正常渲染
+                markers[lineId].push(line)
+                wgl_scene.add(line)
+                console.log("markers")
+                console.log(markers)
+                marker1.lineId = marker2.lineId = line.lineId = lineId
+                drawingLine = true
+
+
+                let cacheId = lineId
+                //在渲染前
+                line.onBeforeRender = function () {
+                    console.log("进入渲染——————")
+
+                    //实时渲染text和2d的点
+                    const positions = line.geometry.attributes.position.array
+
+                    const v0 = new THREE.Vector3(
+                        positions[0],
+                        positions[1],
+                        positions[2]
+                    )
+                    const v1 = new THREE.Vector3(
+                        positions[3],
+                        positions[4],
+                        positions[5]
+                    )
+                    //计算距离
+                    const distance = v0.distanceTo(v1)
+                    let [text1, text2] = textDoms[cacheId]
+                    text1.innerHTML = distance.toFixed(2) + 'm'
+                    text2.innerHTML = distance.toFixed(2) + 'm'
+
+                    let point1 = new THREE.Vector3().lerpVectors(v0, v1, 0)
+                    let point2 = new THREE.Vector3().lerpVectors(v0, v1, 1)
+                    //计算屏幕坐标
+                    point1 = WorldtoScreenPosition(point1)
+                    point2 = WorldtoScreenPosition(point2)
+                    text1.style.left = point1.x + "px"
+                    text1.style.top = point1.y + 5 + "px"
+                    text2.style.left = point2.x + "px"
+                    text2.style.top = point2.y + 5 + "px"
+
+                    let [point2d1, point2d2] = pointsDom[cacheId]
+                    point1 = WorldtoScreenPosition(v0)
+                    point2 = WorldtoScreenPosition(v1)
+                    point2d1.style.left = point1.x + "px"
+                    point2d1.style.top = point1.y + "px"
+                    point2d2.style.left = point2.x + "px"
+                    point2d2.style.top = point2.y + "px"
+
+
+                    //实时渲染3d的两球
+                    let [marker1, marker2] = markers[cacheId]
+                    marker1.position.x = v0.x;
+                    marker1.position.y = v0.y;
+                    marker1.position.z = v0.z;
+
+                    marker2.position.x = v1.x;
+                    marker2.position.y = v1.y;
+                    marker2.position.z = v1.z;
+
+                    // marker1.position.set(v0)
+                    // marker2.position.set(v1)
+                }
+            }else {
+                let line = markers[lineId][2]
+                //保存旧的material
+                line.oldMaterial = line.material
+                //虚线变实线
+                line.material = new THREE.LineBasicMaterial({
+                    color: 0xff5555,
+                    transparent: true,
+                    depthTest: false
+                })
+
+                updateLinePoint(line, intersects[0].point, 3)
+
+                //让2d中的两点可拖动
+                let [point2d1, point2d2] = pointsDom[lineId]
+                point2d1.style.pointerEvents = 'unset'
+                point2d2.style.pointerEvents = 'unset'
+                //监听两点的拖拽
+                draggablePoint(point2d1, lineId)
+                draggablePoint(point2d2, lineId)
+
+
+                lineId++
+                drawingLine = false
+            }
+
+        }
+    }
+    function WorldtoScreenPosition(pos) {
+        const worldVector = new THREE.Vector3(pos.x, pos.y, pos.z);
+        const standardVector = worldVector.project(wgl_camera);
+        console.log(standardVector);
+        const widthHalf = webgl_width/ 2;
+        const heightHalf = webgl_height / 2;
+        return {
+            x: Math.round(standardVector.x * widthHalf + widthHalf),
+            y: Math.round(-standardVector.y * heightHalf + heightHalf),
+            z: 1
+        }
+    }
+
+    function setGeoDrillsAllVisable() {
+        // console.log(wgl_isGeoDrillsVisible);
+        for(var i in wgl_isGeoDrillsVisible)
+            wgl_isGeoDrillsVisible[i] = true;
+        // console.log(wgl_isGeoDrillsVisible);
+    }
+    function setGeoDrillsAllInvisable() {
+        for(var i in wgl_isGeoDrillsVisible)
+            wgl_isGeoDrillsVisible[i] = false;
+
+    }
+
+    //画钻孔圆柱
+    function huazk(x,y,z,h,colors,name,j){
+        let texture = new THREE.TextureLoader().load("../../images/1.bmp");
+        let g = new THREE.CylinderGeometry(0.1,0.1, h, 32 );
+        let m = new THREE.MeshBasicMaterial( {
+            color: colors,
+            //map:texture
+        } );
+        arrDrills[name][j] = new THREE.Mesh( g, m );
+        arrDrills[name][j].position.x=x;
+        arrDrills[name][j].position.y=y;
+        arrDrills[name][j].position.z=z;
+        arrDrills[name][j].visible = false;
+        // console.log( arrDrills[i][j]);
+        wgl_scene.add(  arrDrills[name][j] );
+
+
+    }
+    function getcolorbylayer(layer,s) {
+        let color;
+        switch (layer) {
+            case  0:
+                if(s===0)
+                    color = '0xe5cf00';
+                else
+                    color = '#e5cf00';
+                //color = '#ffd700';
+                break;
+            case  1:
+                if(s===0)
+                    color = '0x0000FF';
+                else
+                    color = '#0000ff';
+                break;
+            case 2:
+                if(s===0)
+                    color = '0xFF0000';
+                else
+                    color = '#FF0000';
+                break;
+            case  3:
+                if(s==0)
+                    color = '0xEE00FF';
+                else
+                    color = '#EE00FF';
+                break;
+            case  4:
+                if(s==0)
+                    color = '0x8500FF';
+                else
+                    //color = '#8500FF';
+                    color = '#00ff3f';
+                break;
+            case  5:
+                if(s==0)
+                    color = '0x00ffb0';
+                else
+                    color = '#00ffb0';
+                break;
+            case  6:
+                if(s==0)
+                    color = '0xaf4c00';
+                else
+                    color = '#af4c00';
+                break;
+            case  7:
+                if(s==0)
+                    color = '0xff1400';
+                else
+                    color = '#ff1400';
+
+                break;
+            case  8:
+                if(s==0)
+                    color = '0x008B8B';
+                else
+                    color = '#008B8B';
+                break;
+            case  9:
+                if(s==0)
+                    color = '0xff5c00';
+                else
+                    color = '#ff5c00';
+                break;
+            case  10:
+                if(s==0)
+                    color = '0x7a7500';
+                else
+                    color = '#7a7500';
+                break;
+            case  11:
+                if(s==0)
+                    color = '0x8d00bc';
+                else
+                    color = '#8d00bc';
+                break;
+            case  12:
+                if(s==0)
+                    color = '0xff00c4';
+                else
+                    color = '#ff00c4';
+                break;
+            case  13:
+                if(s==0)
+                    color = '0xc1ec00';
+                else
+                    color = '#c1ec00';
+                break;
+            case  14:
+                if(s==0)
+                    color = '0x00b2ff';
+                else
+                    color = '#00b2ff';
+                break;
+            case  15:
+                if(s==0)
+                    color = '0x806b00';
+                else
+                    color = '#806b00';
+                break;
+            case  16:
+                if(s==0)
+                    color ='0x9b004d';
+                else
+                    color = '#9b004d';
+                break;
+            case  17:
+                if(s==0)
+                    color = '0x4B0082';
+                else
+                    color = '#4B0082';
+                break;
+            case  18:
+                if(s==0)
+                    color = '0x777246';
+                else
+                    color = '#618cf8';
+                break;
+            case  19:
+                if(s==0)
+                    color = '0xdac617';
+                else
+                    color = '#00ffb0';
+                break;
+            case 20:
+                if(s==0)
+                    color = '0xF08080';
+                else
+                    color = '#F08080';
+                break;
+            case 21:
+                if(s==0)
+                    color = '0xFAFAD2';
+                else
+                    color = '#00a65b';
+                break;
+            case 22:
+                if(s==0)
+                    color ='0xffcc00';
+                else
+                    color = '#ffcc00';
+                break;
+            case 23:
+                if(s==0)
+                    color = '0x48D1CC';
+                else
+                    color = '#48D1CC';
+                break;
+            case 24:
+                if(s==0)
+                    color = '0xcb8100';
+                else
+                    color = '#cb8100';
+                break;
+            case 25:
+                if(s==0)
+                    color = '0xFFA500';
+                else
+                    color = '#FFA500';
+                break;
+            case 26:
+                if(s==0)
+                    color = '0x4e008d';
+                else
+                    color = '#4e008d';
+                break;
+            case 27:
+                if(s==0)
+                    color = '0x0ec7e1';
+                else
+                    color = '#0ec7e1';
+                break;
+            case 28:
+                if(s==0)
+                    color = '0x008080';
+                else
+                    color = '#008080';
+                break;
+            case 29:
+                if(s==0)
+                    color = '0x4682B4';
+                else
+                    color = '#4682B4';
+                break;
+
+            case 30:
+                if(s==0)
+                    color = '0xBC8F8F';
+                else
+                    color = '#BC8F8F';
+                break;
+
+            case  31:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#45b1cb';
+                break;
+            case  32:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#701685';
+                break;
+            case  33:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#455e20';
+                break;
+            case  34:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#367a62';
+                break;
+            case  35:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#b9cc40';
+                break;
+            case  36:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#dc6a6a';
+                break;
+            case  37:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#74d5a1';
+                break;
+            case  38:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#61e7d4';
+                break;
+            case  39:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#8096f1';
+                break;
+            case  40:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#af7fcb';
+                break;
+            case  41:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#e54da7';
+                break;
+            case  42:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#2fadda';
+                break;
+            case  43:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#4d1786';
+                break;
+            case  44:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#49f69a';
+                break;
+            case  45:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#e08888';
+                break;
+            case  46:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#e09029';
+                break;
+            case  47:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#27e563';
+                break;
+            case  48:
+                if(s==0)
+                    color = '0xe8438e';
+                else
+                    color = '#e8438e';
+                break;
+            default:
+                if(s==0)
+                    color = '0xffffff';
+                else
+                    color = '#15b28e';
+                break;
+        }
+
+        return color;
+
+    }
+
+
+    function comClip() {
+
+        let p1x = Number(document.getElementById("point1x").value);
+        let p1y = Number(document.getElementById("point1y").value);
+        let p1z = Number(document.getElementById("point1z").value);
+        let p2x = Number(document.getElementById("point2x").value);
+        let p2y = Number(document.getElementById("point2y").value);
+        let p2z = Number(document.getElementById("point2z").value);
+        let p3x = Number(document.getElementById("point3x").value);
+        let p3y = Number(document.getElementById("point3y").value);
+        let p3z = Number(document.getElementById("point3z").value);
+        cocolor = new Array();
+        console.log("1111");
+        console.log(layerIndex.waiting);
+        rd_show_waiting();
+        console.log(layerIndex.waiting);
+        $.ajax({
+            type: "post",
+            url: "/get_3D_layerClipping",
+            // data: {"layer1":document.getElementById("layer01"),
+            // 	   "layer2":document.getElementById("layer02"),
+            // },
+            data: {
+                "p1x": p1x,
+                "p1y": p1y,
+                "p1z": p1z,
+                "p2x": p2x,
+                "p2y": p2y,
+                "p2z": p2z,
+                "p3x": p3x,
+                "p3y": p3y,
+                "p3z": p3z
+            },
+            // async: false,
+            traditional: true,
+            success: function (data) {
+
+
+                for( let i = 0; i < wgl_qiemianMesh.length; i++)
+                {
+                    wgl_qiemianMesh[i].visible = false;
+                }
+
+                wgl_layers = data;
+                console.log(wgl_layers);
+
+                let geometries = [];
+                // let objects = [];
+                let materials = [];
+                let materials7 = [];
+                let colors = new Array();
+                let colorsnum = new Array();
+
+                let m = 0;
+
+                let r = 0;
+                let g = 0;
+                let sss=0;
+                let y=0;
+
+                console.log("33333");
+                for (let i = 0; i < wgl_layers.length; ++i) {
+                    geometries[i] = new THREE.BufferGeometry();
+                    colors[i]=new  Array();
+                    colorsnum[i]=new  Array();
+                    colorsnum[i].push(colorChange.hexToRgb(getcolorbylayer(i,1)).r/256,colorChange.hexToRgb(getcolorbylayer(i,1)).g/256,colorChange.hexToRgb(getcolorbylayer(i,1)).b/256)
+
+
+                    for (let t=0 ; t < wgl_layers[i].vertices.length/3 ; t++ ){
+                        let color = new THREE.Color();
+                        color.setRGB(colorsnum[i][0],colorsnum[i][1],colorsnum[i][2]);
+                        colors[i].push(color.r, color.g, color.b);
+                    }
+
+
+                    geometries[i].setIndex(wgl_layers[i].indices);
+                    geometries[i].addAttribute('position', new THREE.Float32BufferAttribute(wgl_layers[i].vertices, 3));
+                    geometries[i].addAttribute('normal', new THREE.Float32BufferAttribute(wgl_layers[i].normals, 3));
+                    //新加
+                    geometries[i].addAttribute( 'color', new THREE.Float32BufferAttribute( colors[i], 3 ) );
+                    //colors=null;
+
+                    // geometries[i].addAttribute('position',new THREE.Float32BufferAttribute( wgl_layers[i].vertices , 3 ));
+                    // geometries[i].addAttribute('normal',new THREE.Float32BufferAttribute( wgl_layers[i].normals , 3 ));
+                    materials[i] = new THREE.MeshPhongMaterial({
+                        color: getcolorbylayer(i),//传回去改色
+                        //color:colors[i],
+                        shininess: 100,
+                        side: THREE.DoubleSide,
+
+                        // ***** Clipping setup (material): *****
+                        // clippingPlanes: [localPlane],
+                        // clipShadows: true
+                    });
+                    materials7[i] = new THREE.MeshPhongMaterial( {
+                        side: THREE.DoubleSide,
+                        //shininess: 30,
+                        vertexColors: true,// 使用顶点着色
+
+                    } );
+
+                    wgl_qiemianMesh[i] = new THREE.Mesh(geometries[i], materials7[i]);
+
+                    wgl_scene.add(wgl_qiemianMesh[i]);
+                }
+                console.log("scene");
+                console.log(wgl_scene);
+                layer.close(layerIndex.waiting);
+            },
+            error: function () {
+                console.log();
+                layer.close(layerIndex.waiting);
+            }
+
+        });
+
+    }
+
+    function saveqm()
+    {
+        $.ajax({
+            type: "post",
+            url: "/saveqm",
+            // async: false,
+            traditional: true,
+            success: function (data) {},
+            error: function () {
+                console.log();
+
+            }
+
+        });
+    }
+    function opensst()
+    {
+        $.ajax({
+            type: "post",
+            url: "/opensst",
+            // async: false,
+            traditional: true,
+            success: function (data) {
+                console.log(data);
+                wgl_gridMeshVisible = true;
+                initLayersClipsArray(data,wgl_gridMeshVisible,wgl_gridMesh);
+            },
+            error: function () {
+                console.log();
+
+            }
+
+        });
+    }
+
+    function closeqm()
+    {
+        //document.getElementById("layerlegend").style.visibility="hidden";
+        for ( let s = 0; s < wgl_qiemianMesh.length ; s++){
+
+            wgl_qiemianMesh[s].visible = false;
+        }
+        // wgl_qiemianMeshVisible = false;
+    }
+    function closesst()
+    {
+        for ( let s = 0; s < wgl_gridMesh.length ; s++){
+
+            wgl_gridMesh[s].visible = false;
+        }
+        // wgl_qiemianMeshVisible = false;
+    }
+    function comClipAngel() {
+        // document.getElementById("layerlegend").style.visibility="visible";
+        let p1x = Number(document.getElementById("zxp1x").value);
+        let p1y = Number(document.getElementById("zxp1y").value);
+        let p1z = Number(document.getElementById("zxp1z").value);
+        let p2x = Number(document.getElementById("zxp2x").value);
+        let p2y = Number(document.getElementById("zxp2y").value);
+        let p2z = Number(document.getElementById("zxp2z").value);
+        let zxangle = Number(document.getElementById("zxangle").value);
+
+        cocolor = new Array();
+        console.log("1111");
+        console.log(layerIndex.waiting);
+        rd_show_waiting();
+        console.log(layerIndex.waiting);
+        $.ajax({
+            type: "post",
+            url: "/get_3D_layerClippingAngel",
+
+            data: {
+                "p1x": p1x,
+                "p1y": p1y,
+                "p1z": p1z,
+                "p2x": p2x,
+                "p2y": p2y,
+                "p2z": p2z,
+                "zxangle": zxangle
+            },
+            // async: false,
+            traditional: true,
+            success: function (data) {
+
+
+                for( let i = 0; i < wgl_qiemianMesh.length; i++)
+                {
+                    wgl_qiemianMesh[i].visible = false;
+                }
+
+                wgl_layers = data;
+                console.log(wgl_layers);
+
+                let geometries = [];
+                // let objects = [];
+                let materials = [];
+                let materials7 = [];
+                let colors = new Array();
+                let colorsnum = new Array();
+
+                let m = 0;
+
+                let r = 0;
+                let g = 0;
+                let sss=0;
+                let y=0;
+
+                console.log("33333");
+                for (let i = 0; i < wgl_layers.length; ++i) {
+                    geometries[i] = new THREE.BufferGeometry();
+                    colors[i]=new  Array();
+                    colorsnum[i]=new  Array();
+                    colorsnum[i].push(colorChange.hexToRgb(getcolorbylayer(i,1)).r/256,colorChange.hexToRgb(getcolorbylayer(i,1)).g/256,colorChange.hexToRgb(getcolorbylayer(i,1)).b/256)
+
+
+                    for (let t=0 ; t < wgl_layers[i].vertices.length/3 ; t++ ){
+                        let color = new THREE.Color();
+                        color.setRGB(colorsnum[i][0],colorsnum[i][1],colorsnum[i][2]);
+                        colors[i].push(color.r, color.g, color.b);
+                    }
+
+
+                    geometries[i].setIndex(wgl_layers[i].indices);
+                    geometries[i].addAttribute('position', new THREE.Float32BufferAttribute(wgl_layers[i].vertices, 3));
+                    geometries[i].addAttribute('normal', new THREE.Float32BufferAttribute(wgl_layers[i].normals, 3));
+                    //新加
+                    geometries[i].addAttribute( 'color', new THREE.Float32BufferAttribute( colors[i], 3 ) );
+                    materials[i] = new THREE.MeshPhongMaterial({
+                        color: getcolorbylayer(i),//传回去改色
+                        //color:colors[i],
+                        shininess: 100,
+                        side: THREE.DoubleSide,
+
+                        // ***** Clipping setup (material): *****
+                        // clippingPlanes: [localPlane],
+                        // clipShadows: true
+                    });
+                    materials7[i] = new THREE.MeshPhongMaterial( {
+                        side: THREE.DoubleSide,
+                        //shininess: 30,
+                        vertexColors: true,// 使用顶点着色
+
+                    } );
+
+                    wgl_qiemianMesh[i] = new THREE.Mesh(geometries[i], materials7[i]);
+
+                    wgl_scene.add(wgl_qiemianMesh[i]);
+                }
+                console.log("scene");
+                console.log(wgl_scene);
+                layer.close(layerIndex.waiting);
+            },
+            error: function () {
+                console.log();
+                layer.close(layerIndex.waiting);
+            }
+
+        });
+
+    }
+
+
+    function addClick () {
+        window.addEventListener("mousedown",mousedown);
+        //点击方法
+        function mousedown(e){
+            if(mousepickEnable)
+            {
+                e.preventDefault();
+                console.log(e);
+                var mouse = new THREE.Vector2();//创建二维平面
+                //将html坐标系转化为webgl坐标系，并确定鼠标点击位置
+                //将鼠标点击位置的屏幕坐标转成threejs中的标准坐标,具体解释见代码释义
+                mouse.x = (e.offsetX / webgl_width) * 2 - 1;
+                mouse.y = -(e.offsetY / webgl_height) * 2 + 1;
+                console.log("mousex: "+ mouse.x);
+                console.log("mousey: "+ mouse.y);
+                console.log("window.innerWidth: "+ window.innerWidth);
+                console.log("window.innerHeight: "+ window.innerHeight);
+                //新建一个三维单位向量 假设z方向就是0.5
+                //根据照相机，把这个向量转换到视点坐标系
+                var vector = new THREE.Vector3(mouse.x, mouse.y,0.5).unproject(wgl_camera);
+                // console.log(vector);
+                //在视点坐标系中形成射线,射线的起点向量是照相机， 射线的方向向量是照相机到点击的点，这个向量应该归一标准化。
+                var raycaster = new THREE.Raycaster(wgl_camera.position, vector.sub(wgl_camera.position).normalize());
+
+                //射线和模型求交，选中一系列直线
+                var intersects = raycaster.intersectObjects(wgl_scene.children);
+                console.log(intersects);
+                if (intersects.length >= 0) {
+                    // 必须使用对应点的材质，size为点的大小
+                    //选中第一个射线相交的物体
+                    let selected = intersects[0];//取第一个物体
+                    let x = selected.point.x;
+                    let y = selected.point.y;
+                    let z = selected.point.z;
+                    console.log("x坐标:"+x);
+                    console.log("y坐标:"+y);
+                    console.log("z坐标:"+z);
+                    if(pickPointFlag==0) {
+                        zxcube1.position.x =x;
+                        zxcube1.position.y =y;
+                        zxcube1.position.z =z;
+                        console.log(zxcube1);
+                    }
+                    else{
+                        zxcube2.position.x =x;
+                        zxcube2.position.y =y;
+                        zxcube2.position.z =z;
+                        console.log(zxcube2);
+                    }
+                    let da = get_oc(x,z,y);
+                    if(pickPointFlag==0) {
+
+                        document.getElementById("zxp1x").value=da[0];
+                        document.getElementById("zxp1y").value=da[1];
+                        document.getElementById("zxp1z").value=da[2];
+                        // alert("起点"+da[0]+" "+da[1]+" "+da[2]);
+                        pickPointFlag = 1;
+                    }
+                    else{
+
+                        document.getElementById("zxp2x").value=da[0];
+                        document.getElementById("zxp2y").value=da[1];
+                        document.getElementById("zxp2z").value=da[2];
+                        // alert("终点"+da[0]+" "+da[1]+" "+da[2]);
+                        pickPointFlag = 0;
+                    }
+                }
+            }
+
+        }
+    }
+    
+    function get_oc(x,y,z) {
+        let tc=[x,y,z];
+
+        console.log(tc);
+        $.ajax({
+            type: "POST",
+            url: "/get_oc",
+            traditional: true,
+            data: {
+                "coor": tc
+            },
+            async: false,
+            datatype : 'json',
+            //contentType: "application/json; charset=utf-8",
+            success: function (da) {
+                tc = da;
+            }
+        })
+        return tc;
+    }
+    function getcolorbylayer(layer,s) {
+        let color;
+        switch (layer) {
+            case  0:
+                if(s===0)
+                    color = '0xe5cf00';
+                else
+                    color = '#e5cf00';
+                //color = '#ffd700';
+                break;
+            case  1:
+                if(s===0)
+                    color = '0x0000FF';
+                else
+                    color = '#0000ff';
+                break;
+            case 2:
+                if(s===0)
+                    color = '0xFF0000';
+                else
+                    color = '#FF0000';
+                break;
+            case  3:
+                if(s==0)
+                    color = '0xEE00FF';
+                else
+                    color = '#EE00FF';
+                break;
+            case  4:
+                if(s==0)
+                    color = '0x8500FF';
+                else
+                    //color = '#8500FF';
+                    color = '#00ff3f';
+                break;
+            case  5:
+                if(s==0)
+                    color = '0x00ffb0';
+                else
+                    color = '#00ffb0';
+                break;
+            case  6:
+                if(s==0)
+                    color = '0xaf4c00';
+                else
+                    color = '#af4c00';
+                break;
+            case  7:
+                if(s==0)
+                    color = '0xff1400';
+                else
+                    color = '#ff1400';
+
+                break;
+            case  8:
+                if(s==0)
+                    color = '0x008B8B';
+                else
+                    color = '#008B8B';
+                break;
+            case  9:
+                if(s==0)
+                    color = '0xff5c00';
+                else
+                    color = '#ff5c00';
+                break;
+            case  10:
+                if(s==0)
+                    color = '0x7a7500';
+                else
+                    color = '#7a7500';
+                break;
+            case  11:
+                if(s==0)
+                    color = '0x8d00bc';
+                else
+                    color = '#8d00bc';
+                break;
+            case  12:
+                if(s==0)
+                    color = '0xff00c4';
+                else
+                    color = '#ff00c4';
+                break;
+            case  13:
+                if(s==0)
+                    color = '0xc1ec00';
+                else
+                    color = '#c1ec00';
+                break;
+            case  14:
+                if(s==0)
+                    color = '0x00b2ff';
+                else
+                    color = '#00b2ff';
+                break;
+            case  15:
+                if(s==0)
+                    color = '0x806b00';
+                else
+                    color = '#806b00';
+                break;
+            case  16:
+                if(s==0)
+                    color ='0x9b004d';
+                else
+                    color = '#9b004d';
+                break;
+            case  17:
+                if(s==0)
+                    color = '0x4B0082';
+                else
+                    color = '#4B0082';
+                break;
+            case  18:
+                if(s==0)
+                    color = '0x777246';
+                else
+                    color = '#618cf8';
+                break;
+            case  19:
+                if(s==0)
+                    color = '0xdac617';
+                else
+                    color = '#00ffb0';
+                break;
+            case 20:
+                if(s==0)
+                    color = '0xF08080';
+                else
+                    color = '#F08080';
+                break;
+            case 21:
+                if(s==0)
+                    color = '0xFAFAD2';
+                else
+                    color = '#00a65b';
+                break;
+            case 22:
+                if(s==0)
+                    color ='0xffcc00';
+                else
+                    color = '#ffcc00';
+                break;
+            case 23:
+                if(s==0)
+                    color = '0x48D1CC';
+                else
+                    color = '#48D1CC';
+                break;
+            case 24:
+                if(s==0)
+                    color = '0xcb8100';
+                else
+                    color = '#cb8100';
+                break;
+            case 25:
+                if(s==0)
+                    color = '0xFFA500';
+                else
+                    color = '#FFA500';
+                break;
+            case 26:
+                if(s==0)
+                    color = '0x4e008d';
+                else
+                    color = '#4e008d';
+                break;
+            case 27:
+                if(s==0)
+                    color = '0x0ec7e1';
+                else
+                    color = '#0ec7e1';
+                break;
+            case 28:
+                if(s==0)
+                    color = '0x008080';
+                else
+                    color = '#008080';
+                break;
+            case 29:
+                if(s==0)
+                    color = '0x4682B4';
+                else
+                    color = '#4682B4';
+                break;
+
+            case 30:
+                if(s==0)
+                    color = '0xBC8F8F';
+                else
+                    color = '#BC8F8F';
+                break;
+
+            case  31:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#45b1cb';
+                break;
+            case  32:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#701685';
+                break;
+            case  33:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#455e20';
+                break;
+            case  34:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#367a62';
+                break;
+            case  35:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#b9cc40';
+                break;
+            case  36:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#dc6a6a';
+                break;
+            case  37:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#74d5a1';
+                break;
+            case  38:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#61e7d4';
+                break;
+            case  39:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#8096f1';
+                break;
+            case  40:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#af7fcb';
+                break;
+            case  41:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#e54da7';
+                break;
+            case  42:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#2fadda';
+                break;
+            case  43:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#4d1786';
+                break;
+            case  44:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#49f69a';
+                break;
+            case  45:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#e08888';
+                break;
+            case  46:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#e09029';
+                break;
+            case  47:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#27e563';
+                break;
+            case  48:
+                if(s==0)
+                    color = '0xe8438e';
+                else
+                    color = '#e8438e';
+                break;
+            default:
+                if(s==0)
+                    color = '0xffffff';
+                else
+                    color = '#15b28e';
+                break;
+        }
+
+        return color;
+
+    }
+
+
+    function getcolorbylayerCJJ(layer,s) {
+        let color;
+        switch (layer) {
+            case  0:
+                if(s===0)
+                    color = '0x95ff00';
+                else
+                    color = '#f115ba';
+                //color = '#ffd700';
+                break;
+            case  1:
+                if(s===0)
+                    color = '0x95ff00';
+                else
+                    color = '#0e25f3';
+                break;
+            case 2:
+                if(s===0)
+                    color = '0x95ff00';
+                else
+                    color = '#d50f2d';
+                break;
+            case  3:
+                if(s==0)
+                    color = '0x95ff00';
+                else
+                    color = '#a816d0';
+                break;
+            case  4:
+                if(s==0)
+                    color = '0x95ff00';
+                else
+                    //color = '#8500FF';
+                    color = '#e5e218';
+                break;
+            case  5:
+                if(s==0)
+                    color = '0x95ff00';
+                else
+                    color = '#decf46';
+                break;
+            case  6:
+                if(s==0)
+                    color = '0x95ff00';
+                else
+                    color = '#95ff00';
+                break;
+            case  7:
+                if(s==0)
+                    color = '0x95ff00';
+                else
+                    color = '#95ff00';
+
+                break;
+            case  8:
+                if(s==0)
+                    color = '0x95ff00';
+                else
+                    color = '#95ff00';
+                break;
+            case  9:
+                if(s==0)
+                    color = '0x95ff00';
+                else
+                    color = '#95ff00';
+                break;
+            case  10:
+                if(s==0)
+                    color = '0x95ff00';
+                else
+                    color = '#95ff00';
+                break;
+            case  11:
+                if(s==0)
+                    color = '0x00bc80';
+                else
+                    color = '#00bc80';
+                break;
+            case  12:
+                if(s==0)
+                    color = '0x00bc80';
+                else
+                    color = '#00bc80';
+                break;
+            case  13:
+                if(s==0)
+                    color = '0x00bc80';
+                else
+                    color = '#00bc80';
+                break;
+            case  14:
+                if(s==0)
+                    color = '0x00bc80';
+                else
+                    color = '#00bc80';
+                break;
+            case  15:
+                if(s==0)
+                    color = '0x00bc80';
+                else
+                    color = '#00bc80';
+                break;
+            case  16:
+                if(s==0)
+                    color ='0x00bc80';
+                else
+                    color = '#00bc80';
+                break;
+            case  17:
+                if(s==0)
+                    color = '0x00bc80';
+                else
+                    color = '#00bc80';
+                break;
+            case  18:
+                if(s==0)
+                    color = '0x00bc80';
+                else
+                    color = '#00bc80';
+                break;
+            case  19:
+                if(s==0)
+                    color = '0x00bc80';
+                else
+                    color = '#00bc80';
+                break;
+            case 20:
+                if(s==0)
+                    color = '0x00bc80';
+                else
+                    color = '#00bc80';
+                break;
+            case 21:
+                if(s==0)
+                    color = '0x1100a6';
+                else
+                    color = '#1100a6';
+                break;
+            case 22:
+                if(s==0)
+                    color ='0x1100a6';
+                else
+                    color = '#1100a6';
+                break;
+            case 23:
+                if(s==0)
+                    color = '0x1100a6';
+                else
+                    color = '#1100a6';
+                break;
+            case 24:
+                if(s==0)
+                    color = '0x1100a6';
+                else
+                    color = '#1100a6';
+                break;
+            case 25:
+                if(s==0)
+                    color = '0x1100a6';
+                else
+                    color = '#1100a6';
+                break;
+            case 26:
+                if(s==0)
+                    color = '0x1100a6';
+                else
+                    color = '#1100a6';
+                break;
+            case 27:
+                if(s==0)
+                    color = '0x1100a6';
+                else
+                    color = '#1100a6';
+                break;
+            case 28:
+                if(s==0)
+                    color = '0x1100a6';
+                else
+                    color = '#1100a6';
+                break;
+            case 29:
+                if(s==0)
+                    color = '0x1100a6';
+                else
+                    color = '#1100a6';
+                break;
+
+            case 30:
+                if(s==0)
+                    color = '0x1100a6';
+                else
+                    color = '#1100a6';
+                break;
+
+            case  31:
+                if(s==0)
+                    color = '0xae45cb';
+                else
+                    color = '#ae45cb';
+                break;
+            case  32:
+                if(s==0)
+                    color = '0xae45cb';
+                else
+                    color = '#ae45cb';
+                break;
+            case  33:
+                if(s==0)
+                    color = '0xae45cb';
+                else
+                    color = '#ae45cb';
+                break;
+            case  34:
+                if(s==0)
+                    color = '0xae45cb';
+                else
+                    color = '#ae45cb';
+                break;
+            case  35:
+                if(s==0)
+                    color = '0xae45cb';
+                else
+                    color = '#ae45cb';
+                break;
+            case  36:
+                if(s==0)
+                    color = '0xae45cb';
+                else
+                    color = '#ae45cb';
+                break;
+            case  37:
+                if(s==0)
+                    color = '0xae45cb';
+                else
+                    color = '#ae45cb';
+                break;
+            case  38:
+                if(s==0)
+                    color = '0xae45cb';
+                else
+                    color = '#ae45cb';
+                break;
+            case  39:
+                if(s==0)
+                    color = '0xae45cb';
+                else
+                    color = '#ae45cb';
+                break;
+            case  40:
+                if(s==0)
+                    color = '0xae45cb';
+                else
+                    color = '#ae45cb';
+                break;
+            case  41:
+                if(s==0)
+                    color = '0xe54d8a';
+                else
+                    color = '#e54d8a';
+                break;
+            case  42:
+                if(s==0)
+                    color = '0xe54d8a';
+                else
+                    color = '#e54d8a';
+                break;
+            case  43:
+                if(s==0)
+                    color = '0xe54d8a';
+                else
+                    color = '#e54d8a';
+                break;
+            case  44:
+                if(s==0)
+                    color = '0xe54d8a';
+                else
+                    color = '#e54d8a';
+                break;
+            case  45:
+                if(s==0)
+                    color = '0xe54d8a';
+                else
+                    color = '#e54d8a';
+                break;
+            case  46:
+                if(s==0)
+                    color = '0xe54d8a';
+                else
+                    color = '#e54d8a';
+                break;
+            case  47:
+                if(s==0)
+                    color = '0xe54d8a';
+                else
+                    color = '#e54d8a';
+                break;
+            case  48:
+                if(s==0)
+                    color = '0xe54d8a';
+                else
+                    color = '#e54d8a';
+                break;
+            case  49:
+                if(s==0)
+                    color = '0xe54d8a';
+                else
+                    color = '#e54d8a';
+                break;
+            case  50:
+                if(s==0)
+                    color = '0xe54d8a';
+                else
+                    color = '#e54d8a';
+                break;
+            default:
+                if(s==0)
+                    color = '0xf80000';
+                else
+                    color = '#f80000';
+                break;
+        }
+
+        return color;
+
+    }
+
+    function drawdeep() {
+
+        let cnum;
+        const g1 = new THREE.SphereGeometry(0.1, 32, 16);
+        for (let i = 0; i < wgl_layers.length; i++) {
+            point[i] = new Array();
+            const m1 = new THREE.MeshBasicMaterial({color: 0xFFFFFF});
+
+            for (let j = 0; j < wgl_layers[i].vertices.length / 3; j++) {
+
+                const sphere = new THREE.Mesh(g1, m1);
+                sphere.position.x = wgl_layers[i].vertices[j * 3];
+                sphere.position.y = wgl_layers[i].vertices[j * 3 + 1];
+                sphere.position.z = wgl_layers[i].vertices[j * 3 + 2];
+                scene.add(sphere);
+                point[i][j] = sphere;
+
+            }
+        }
+        console.log(point);
+    }
+
+    function numx20(num){
+
+        while( num > 15 )
+            num = Math.round( num / 10 );
+        //console.log(num)
+        return num;
+    }
+
+    function SolveH(minh,maxh,spaceh,height){
+        let i=1,num=0,x=0;
+        //接受最小高度，最大高度，间隔高度以及高度数值
+        if ( height > maxh+1 )
+            return 99;
+        if( height < 0 )
+            return 0;
+
+        return Math.floor(height);
+
+    }
+    function colorCot(lh,rh, r,g,b,ox,hex) {//里面的参数可以自定义
+        this.lh = lh;
+        this.rh = rh;
+        this.r = r;
+        this.g = g;
+        this.b = b;
+        this.ox = ox;
+        this.hex = hex;
+        this.id = undefined;
+    }
+    function getcolorbylayer(layer,s) {
+        let color;
+        switch (layer) {
+            case  0:
+                if(s===0)
+                    color = '0xe5cf00';
+                else
+                    color = '#e5cf00';
+                //color = '#ffd700';
+                break;
+            case  1:
+                if(s===0)
+                    color = '0x0000FF';
+                else
+                    color = '#0000ff';
+                break;
+            case 2:
+                if(s===0)
+                    color = '0xFF0000';
+                else
+                    color = '#FF0000';
+                break;
+            case  3:
+                if(s==0)
+                    color = '0xEE00FF';
+                else
+                    color = '#EE00FF';
+                break;
+            case  4:
+                if(s==0)
+                    color = '0x8500FF';
+                else
+                    //color = '#8500FF';
+                    color = '#00ff3f';
+                break;
+            case  5:
+                if(s==0)
+                    color = '0x00ffb0';
+                else
+                    color = '#00ffb0';
+                break;
+            case  6:
+                if(s==0)
+                    color = '0xaf4c00';
+                else
+                    color = '#af4c00';
+                break;
+            case  7:
+                if(s==0)
+                    color = '0xff1400';
+                else
+                    color = '#ff1400';
+
+                break;
+            case  8:
+                if(s==0)
+                    color = '0x008B8B';
+                else
+                    color = '#008B8B';
+                break;
+            case  9:
+                if(s==0)
+                    color = '0xff5c00';
+                else
+                    color = '#ff5c00';
+                break;
+            case  10:
+                if(s==0)
+                    color = '0x7a7500';
+                else
+                    color = '#7a7500';
+                break;
+            case  11:
+                if(s==0)
+                    color = '0x8d00bc';
+                else
+                    color = '#8d00bc';
+                break;
+            case  12:
+                if(s==0)
+                    color = '0xff00c4';
+                else
+                    color = '#ff00c4';
+                break;
+            case  13:
+                if(s==0)
+                    color = '0xc1ec00';
+                else
+                    color = '#c1ec00';
+                break;
+            case  14:
+                if(s==0)
+                    color = '0x00b2ff';
+                else
+                    color = '#00b2ff';
+                break;
+            case  15:
+                if(s==0)
+                    color = '0x806b00';
+                else
+                    color = '#806b00';
+                break;
+            case  16:
+                if(s==0)
+                    color ='0x9b004d';
+                else
+                    color = '#9b004d';
+                break;
+            case  17:
+                if(s==0)
+                    color = '0x4B0082';
+                else
+                    color = '#4B0082';
+                break;
+            case  18:
+                if(s==0)
+                    color = '0x777246';
+                else
+                    color = '#618cf8';
+                break;
+            case  19:
+                if(s==0)
+                    color = '0xdac617';
+                else
+                    color = '#00ffb0';
+                break;
+            case 20:
+                if(s==0)
+                    color = '0xF08080';
+                else
+                    color = '#F08080';
+                break;
+            case 21:
+                if(s==0)
+                    color = '0xFAFAD2';
+                else
+                    color = '#00a65b';
+                break;
+            case 22:
+                if(s==0)
+                    color ='0xffcc00';
+                else
+                    color = '#ffcc00';
+                break;
+            case 23:
+                if(s==0)
+                    color = '0x48D1CC';
+                else
+                    color = '#48D1CC';
+                break;
+            case 24:
+                if(s==0)
+                    color = '0xcb8100';
+                else
+                    color = '#cb8100';
+                break;
+            case 25:
+                if(s==0)
+                    color = '0xFFA500';
+                else
+                    color = '#FFA500';
+                break;
+            case 26:
+                if(s==0)
+                    color = '0x4e008d';
+                else
+                    color = '#4e008d';
+                break;
+            case 27:
+                if(s==0)
+                    color = '0x0ec7e1';
+                else
+                    color = '#0ec7e1';
+                break;
+            case 28:
+                if(s==0)
+                    color = '0x008080';
+                else
+                    color = '#008080';
+                break;
+            case 29:
+                if(s==0)
+                    color = '0x4682B4';
+                else
+                    color = '#4682B4';
+                break;
+
+            case 30:
+                if(s==0)
+                    color = '0xBC8F8F';
+                else
+                    color = '#BC8F8F';
+                break;
+
+            case  31:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#45b1cb';
+                break;
+            case  32:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#701685';
+                break;
+            case  33:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#455e20';
+                break;
+            case  34:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#367a62';
+                break;
+            case  35:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#b9cc40';
+                break;
+            case  36:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#dc6a6a';
+                break;
+            case  37:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#74d5a1';
+                break;
+            case  38:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#61e7d4';
+                break;
+            case  39:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#8096f1';
+                break;
+            case  40:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#af7fcb';
+                break;
+            case  41:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#e54da7';
+                break;
+            case  42:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#2fadda';
+                break;
+            case  43:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#4d1786';
+                break;
+            case  44:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#49f69a';
+                break;
+            case  45:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#e08888';
+                break;
+            case  46:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#e09029';
+                break;
+            case  47:
+                if(s==0)
+                    color = '0xFF0000';
+                else
+                    color = '#27e563';
+                break;
+            case  48:
+                if(s==0)
+                    color = '0xe8438e';
+                else
+                    color = '#e8438e';
+                break;
+            default:
+                if(s==0)
+                    color = '0xffffff';
+                else
+                    color = '#15b28e';
+                break;
+        }
+
+        return color;
+
+    }
+    function tuli(x,y,z) {//里面的参数可以自定义
+        var geometry = new THREE.PlaneGeometry( 0.1, 0.4 );
+        var material;
+
+        new THREE.TextureLoader().load( "../../images/tuli.png", function ( texture ) {
+
+            texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+            texture.anisotropy = wgl_renderer.capabilities.getMaxAnisotropy();
+            //wireframe: true;
+
+            //texture.matrixAutoUpdate = false; // default true; set to false to update texture.matrix manually
+
+            material = new THREE.MeshBasicMaterial({map: texture, side: THREE.DoubleSide});
+            wgl_cjjTuli = new THREE.Mesh( geometry, material );
+            wgl_cjjTuli.position.x=x;
+            wgl_cjjTuli.position.y=y;
+            wgl_cjjTuli.position.z=z;
+            wgl_cjjTuli.visible = true;
+            console.log(wgl_cjjTuli);
+            wgl_scene.add(wgl_cjjTuli);
+        });
+
+    }
+    function  changeFirstControls(){
+        console.log("123");
+        wgl_currentControl = 1;
+        wgl_controls.dispose();//原有移除，重新绑控件
+        wgl_controls = new THREE.FirstPersonControls( wgl_camera, wgl_renderer.domElement );
+        // wgl_controls.lookSpeed = 0.02; //鼠标水平环视速度
+        wgl_controls.lookSpeed = 0.1; //鼠标水平环视速度
+        wgl_controls.movementSpeed = 5; //相机移动速度
+        //wgl_controls.noFly = true;
+        wgl_controls.constrainVertical = true; //约束垂直在verticalMin和verticalMax范围之间。
+        wgl_controls.verticalMin = 1.0;
+        wgl_controls.verticalMax = 2.0;
+        wgl_controls.target = new THREE.Vector3(0, 0, 0);
+        wgl_scene.scale.set(20, 20, 20);
+    }
+
+    function changeOrbitControls(){
+        console.log("2333");
+        wgl_currentControl = 0;
+        wgl_controls.dispose();//原有移除，重新绑控件
+        wgl_camera.position.x =-16;
+        wgl_camera.position.y =100;
+        wgl_camera.position.z =-20 ;
+
+        wgl_controls = new THREE.OrbitControls(wgl_camera, wgl_renderer.domElement);//鼠标控制屏幕转动
+        wgl_controls.minDistance = 1;
+        wgl_controls.maxDistance = 500;
+        wgl_controls.target = new THREE.Vector3(0, 0, 0);
+        wgl_scene.scale.set(1, 1, 1);
+
+    }
+
+    function resetControls(){
+        if(wgl_currentControl==0)
+            changeOrbitControls();
+        else
+            changeFirstControls();
+    }
+
+    function getroadobj(){
+
+        // 创建 OBJ 模型加载器
+        let objLoader = new THREE.OBJLoader();
+
+        let textureLoader = new THREE.TextureLoader();
+
+        objLoader.load("../../images/roadway3d.obj", function(object) {
+
+            // 从这里开始操作加载的3D对象
+            // pointLight.target=object;
+            let texture = new THREE.TextureLoader().load("../../images/1.bmp");
+            texture.repeat.set(2000,2000);
+            texture.wrapS = THREE.RepeatWrapping
+            texture.wrapT = THREE.RepeatWrapping;
+            object.traverse(function(child) {
+                if (child instanceof THREE.Mesh) {
+
+                    child.geometry.computeBoundingBox();
+                    child.geometry.computeVertexNormals ()
+                    child.geometry.removeAttribute('uv')
+
+                    child.geometry.addAttribute( 'uv', new THREE.BufferAttribute(
+                        boxUvCom(child.geometry.getAttribute('position'),
+                            child.geometry.getAttribute('normal'),
+                            child.geometry.boundingBox.max,child.geometry.boundingBox.min,1)
+                        , 2 ) );
+
+                    child.material.map = texture;
+                    child.material.side = THREE.DoubleSide;
+
+
+                }
+            });
+
+            wgl_scene.add(object);
+
+        });
+
+
+    }
+    function setDemVisable() {
+
+        wgl_isDemVisable = true;
+
+    }
+
+    function setDemInvisable() {
+
+        wgl_isDemVisable = false;
+    }
+    function getobjmtl(){
+
+        // 创建 OBJ 模型加载器
+        let objLoader = new THREE.OBJLoader();
+        let textureLoader = new THREE.TextureLoader();
+
+        objLoader.load('../../images/dibiao.obj', function(object) {
+            // 从这里开始操作加载的3D对象
+            let texture = new THREE.TextureLoader().load("../../images/1111.png");
+
+            object.traverse(function(child) {
+                if (child instanceof THREE.Mesh) {
+                    child.material.map = texture;
+                    child.material.side = THREE.DoubleSide
+                    child.material.depthTest=false;
+                    child.material.depthWrite=false;
+                    child.position.y= child.position.y+0.005;
+                    child.renderOrder=200
+                }
+            });
+            wgl_dem = object;
+            wgl_dem.visible = false;
+            wgl_scene.add(wgl_dem);
+
+        });
+    }
+    function boxUvCom(ovDate,oNormal,max,min,triNum){
+        var type=0,veNum=ovDate.count;
+        let Uvs= new Float32Array(veNum*2);//存储uv的数组4151*2
+        // 长宽高
+        let dx = max.x- min.x;
+        let dy = max.y- min.y;
+        let dz = max.z- min.z;
+
+
+        let v1,v2,v3;
+        let nX,nY,nZ;
+        v1=v2=v3=new THREE.Vector3(0,0,0);
+
+
+        for(let i=0;i<veNum;i++){
+            v1.x=ovDate.array[i*3];
+            v1.y=ovDate.array[i*3+1];
+            v1.z=ovDate.array[i*3+2];
+
+            nX=oNormal.array[i*3];
+            nY=oNormal.array[i*3+1];
+            nZ=oNormal.array[i*3+2];
+            //取绝对值，寻找最大分量
+            const absNum1 = Math.abs(nX);
+            const absNum2 = Math.abs(nY);
+            const absNum3 = Math.abs(nZ);
+
+            if ((absNum1 >= absNum2 && absNum1 >= absNum3)) {
+                type=0;
+
+            } else if (absNum2 >= absNum1 && absNum2 >= absNum3) {
+                type=1;
+
+            } else {
+                type=2;
+            }
+
+
+
+            if(type==2){
+                if(dx>dy){
+                    Uvs[i*2]=((v1.x-min.x)/dx);
+                    Uvs[i*2+1]=((v1.y-min.y)/dx);
+                }else{
+                    Uvs[i*2]=((v1.x-min.x)/dy);
+                    Uvs[i*2+1]=((v1.y-min.y)/dy);
+                }
+            }else if(type==0){
+                if(dz>dy){
+                    Uvs[i*2]=((v1.y-min.y)/dz);
+                    Uvs[i*2+1]=((v1.z-min.z)/dz);
+
+                }else{
+                    Uvs[i*2]=((v1.y-min.y)/dy);
+                    Uvs[i*2+1]=((v1.z-min.z)/dy);
+                }
+            }else if(type==1){
+                if(dx>dz){
+                    Uvs[i*2]=((v1.x-min.x)/dx);
+                    Uvs[i*2+1]=((v1.z-min.z)/dx);
+                }else{
+                    Uvs[i*2]=((v1.x-min.x)/dz);
+                    Uvs[i*2+1]=((v1.z-min.z)/dz);
+                }
+            }
+
+        }
+        return Uvs;
+
+    }
+
+
+    function GUI(gui){
+        gui.add({ fun: () => {
+                let allCascade = document.getElementsByClassName("distance");
+                let len = allCascade.length
+                for (let i = 0; i <len ; i++) {
+                    allCascade[0].remove();
+                }
+                console.log(markers)
+                for (let i1=0;i1<markers.length;i1++){
+                    for(let j=0;j<markers[i1].length;j++){
+                        wgl_scene.remove(markers[i1][j])
+                    }
+                }
+            } }, 'fun').name('清除');
+        const options = {
+            type:false
+        };
+        gui.add(options,'type').name('测距').onChange(function(value){
+            isActive=value;
+            console.log(value)
+
+        });
+    }
+</script>
+</body>
+<div id="rd_waiting_body"></div>
+</html>
