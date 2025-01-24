@@ -213,7 +213,7 @@ return true;
 
 addWithInsertOrAppend 方法实现了增量地将一个顶点插入到当前的 Delaunay 三角网（TIN）中的逻辑。以下是插入的具体流程和关键步骤：
 
-#### 2.1. 边界检查和更新
+#### 2.1. 边界检查和更新✅
 
 ```js
 if (x < boundsMinX) {
@@ -232,12 +232,15 @@ if (y < boundsMinY) {
 
 •**作用**：保证 TIN 的边界范围随新增点动态调整。
 
-#### 2.2找到包含插入点的三角形
+#### 2.2找到包含插入点的三角形✅
 
 ```java
 if (searchEdge == null) {
+  //   * Get first valid, non-ghost QuadEdge in collection
   searchEdge = edgePool.getStartingEdge();
 }
+//   * Search the mesh beginning at the specified edge position to find
+ //  * the triangle that contains the specified coordinates.
 searchEdge = walker.findAnEdgeFromEnclosingTriangle(searchEdge, x, y);
 ```
 
@@ -263,7 +266,9 @@ searchEdge = walker.findAnEdgeFromEnclosingTriangle(searchEdge, x, y);
 
 有虚拟顶点 所以一定可以找到
 
-#### 2.3. 检查顶点是否重合 已存在
+#### 2.3. 检查顶点是否重合✅
+
+给定一个阈值判断
 
 ```java
 QuadEdge matchEdge = checkTriangleVerticesForMatch(searchEdge, x, y, vertexTolerance2);
@@ -287,13 +292,27 @@ if (matchEdge != null) {
 
 **目的**：避免重复插入顶点，保证数据的一致性。
 
-#### 2.4 初始化插入边
+#### 2.4 初始化插入边✅
 
 ```java
-Vertex anchor = searchEdge.getA();
-QuadEdge pStart = edgePool.allocateEdge(v, anchor);
-QuadEdge p = pStart;
-p.setForward(searchEdge);
+ //当前边的向量顶点A
+    Vertex anchor = searchEdge.getA();
+
+    QuadEdge buffer = null;
+    QuadEdge c, n0, n1, n2;
+
+    //从插入点v ->anchor 方向，创建边p:v ->anchor
+    QuadEdge pStart = edgePool.allocateEdge(v, anchor);
+    QuadEdge p = pStart;
+    //设置p 前向边，就是当前的searchEdge（计作A）
+    p.setForward(searchEdge);
+    //获取searchEdge的前向边 (计作B)
+    n1 = searchEdge.getForward();
+    //B的前向边 (计作C)
+    n2 = n1.getForward();
+    n2.setForward(p.getDual());
+
+    c = searchEdge;
 ```
 
 **目的**：创建从新点 v 到锚点（anchor）的插入边 pStart。
@@ -304,6 +323,8 @@ p.setForward(searchEdge);
 
 - 从当前顶点 anchor 到新插入顶点 v 创建一条新边。
 - 新边作为起始边（pStart），并将其与包含三角形的当前边 searchEdge 连接。
+
+<img src="./assets/image-20250124205750405.png" alt="image-20250124205750405" style="zoom:50%;" />
 
 #### 2.5. 循环检查 Delaunay 性质
 
@@ -549,6 +570,11 @@ return true;
 
 
 ## Step 2 有约束边界的三角剖分
+
+```
+        tin.addConstraints(cListTop, false);
+
+```
 
 
 
