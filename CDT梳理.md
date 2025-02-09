@@ -732,6 +732,232 @@ return true;
 
 ```
 
+将约束边点依次插入
+
+根据点集生成约束边并标记不可修改。
+
+
+
+```mermaid
+graph TD
+    A[插入所有约束顶点] --> B[合并重合顶点]
+    B --> C[强制插入约束边]
+    C --> D{检测交叉边?}
+    D -->|是| E[构造冲突边列表]
+    D -->|否| F[完成]
+    E --> G[移除冲突边]
+    G --> H[构建约束边]
+    H --> I[填充空洞恢复Delaunay]
+```
+
+在你提供的代码中，processConstraint 方法负责处理约束边，并确保它与现有的三角形网格相交，最终按照 Delaunay 准则更新三角网。具体来说，这段代码用于插入约束边，并通过“填补空腔”（fillCavity）操作来恢复图的拓扑结构。
+
+
+
+我们可以从以下几个方面来分析这段代码是如何进行约束遍历和与其他边交叉并恢复的。
+
+
+
+**1. 初始化与约束边的遍历**
+
+在方法一开始，首先准备了约束边的顶点列表 cvList，并检查是否是一个封闭多边形。如果是，就在列表末尾加入第一个顶点，以完成循环。
+
+```java
+if (constraint.isPolygon()) {
+
+ *// close the loop*
+
+ cvList.add(cvList.get(0));
+
+}
+```
+
+cvList 包含了约束边的所有顶点。nSegments 代表了约束边的段数，每个段连接两个连续的顶点。
+
+**2. 查找插入点所在的三角形**
+
+接下来，代码通过 findAnEdgeFromEnclosingTriangle 方法从 searchEdge 开始查找包含第一个约束顶点（v0）的三角形。然后通过 isMatchingVertex 判断当前边是否与约束边的第一个顶点相匹配：
+
+```java
+searchEdge = walker.findAnEdgeFromEnclosingTriangle(searchEdge, x0, y0);
+```
+
+根据匹配的顶点，选择合适的初始边（e0）：
+
+```java
+if (isMatchingVertex(v0, searchEdge.getA())) {
+
+ e0 = searchEdge;
+
+} else if (isMatchingVertex(v0, searchEdge.getB())) {
+
+ e0 = searchEdge.getDual();
+
+} else {
+
+ e0 = searchEdge.getReverse();
+
+}
+
+```
+
+因为先前依旧进行了插入操作，所以ABC一定有一个起始点是的
+
+此时，e0 代表了包含 v0 的边。
+
+查看当前已有以v0为起始点的边，是否为约束边可以复用（即v1为终点）
+
+**3. 遍历约束边的每一段并处理交叉**
+
+接下来，程序遍历 cvList 中的每一对顶点（v0, v1），并从 e0 开始逐步查找和处理约束边与现有三角形网格的交叉。
+
+**Pinwheel 操作**
+
+代码首先计算出每个顶点的坐标差，并将这些差值归一化为单位向量 ux 和 uy。然后，通过计算与约束边的垂直向量，进行 **Pinwheel 操作**（旋转检查）来找到可能的交点。
+
+```java
+ux = x1 - x0;
+
+uy = y1 - y0;
+
+u = Math.sqrt(ux * ux + uy * uy);
+
+ux /= u; *// unit vector*
+
+uy /= u;
+
+px = -uy; *// perpendicular*
+
+py = ux;
+```
+
+然后，代码通过边的循环检查，判断当前边是否与约束边交叉。
+
+```java
+b = e.getB();
+
+bx = b.getX() - x0;
+
+by = b.getY() - y0;
+
+bh = bx * px + by * py;
+```
+
+如果当前边与约束边相交（或者几乎共线），代码会在约束边上插入新顶点，并进行拓扑更新。此时，约束边的列表 cvList 会被更新，三角形的边也会重新设置：
+
+
+
+if (Math.abs(bh) <= vTolerence && bx * ux + by * uy > 0) {
+
+ cvList.add(iSegment + 1, b);
+
+ nSegments++;
+
+ setConstrained(e0, constraint, edgesForConstraint);
+
+ e0 = e0.getDual(); *// set up e0 for next iteration of iSegment*
+
+ continue;
+
+}
+
+
+
+**寻找交叉边并恢复**
+
+
+
+在计算交点后，代码继续检查并恢复三角形网格的拓扑。通过计算交点的参数 t，确定约束边是否会与现有的三角形边交叉：
+
+
+
+double t = (ax * dy - ay * dx) / (ux * dy - uy * dx);
+
+if (t > 0) {
+
+ right0 = e;
+
+ left0 = e.getReverse();
+
+ h = n.getDual();
+
+ break;
+
+}
+
+
+
+这个过程通过不断循环查找与约束边相交的三角形，并修复网格中的拓扑关系，最终恢复正确的三角形结构。
+
+
+
+**4. 构建交点并填充空腔**
+
+
+
+一旦找到交点并确定了新的边，代码会创建新的三角形边，并进行拓扑更新。此时，fillCavity 方法会被调用来填充空腔，即修复因插入约束边而产生的“洞”，确保三角形网格的完整性。
+
+
+
+QuadEdge n = edgePool.allocateEdge(v0, c);
+
+setConstrained(n, constraint, edgesForConstraint);
+
+QuadEdge d = n.getDual();
+
+n.setForward(left1);
+
+n.setReverse(left0);
+
+d.setForward(right0);
+
+d.setReverse(right1);
+
+e0 = d;
+
+
+
+fillCavity(n);
+
+fillCavity(d);
+
+
+
+**5. 总结**
+
+​	•	**遍历与交叉检测**：代码通过遍历约束边的每一段，逐步检测与现有三角形网格的交叉情况，并在交点处插入新的顶点，进行边的插入和拓扑修复。
+
+​	•	**Pinwheel 操作**：通过计算边的单位向量和垂直向量，进行旋转检查，找到交叉点并确保约束边与现有三角形网格相交。
+
+​	•	**空腔填充**：每次插入新的边时，通过 fillCavity 方法填补插入造成的空腔，确保图的拓扑正确性。
+
+### 保留有效区域
+
+### **`floodFillConstrainedRegion` 算法详解**
+
+#### **一、核心功能**
+
+**目的**：在约束Delaunay三角剖分（CDT）后，根据约束边界（如多边形、道路、河流等）标记并保留有效区域的三角形集合。
+
+**类比**：类似Photoshop的魔棒工具，通过"泛洪填充"自动选中闭合边界内的所有区域。
+
+
+
+这一过程确保了约束边与现有网格的正确交互，并最终使三角形网格保持 Delaunay 准则。
+
+```mermaid
+sequenceDiagram
+    主循环->>交叉检测: 未找到直连边
+    交叉检测->>几何计算: 计算方向/垂直向量
+    几何计算->>符号检测: 检查投影符号
+    符号检测-->>有交叉: hab <= 0
+    有交叉->>参数计算: 计算交点参数t
+    参数计算-->>有效交点: t > 0
+    有效交点->>移除旧边: 开始挖掘空洞
+    移除旧边->>插入新边: 强制创建约束边
+    插入新边->>填充空洞: 恢复Delaunay
+```
+
 
 
 # 虚拟顶点的意义
