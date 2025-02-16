@@ -410,6 +410,27 @@ min( v ) {
 
 ## 核心代码
 
+```
+	- 系统结构流程图
+- 功能介绍
+包含4.2 4.3 4.4
+（原生H5开发**系统升级优化**为VUE3的框架开发）
+
+本章介绍三维地质建模系统的整体架构与主要功能模块，分析 原生 H5 开发 向 Vue 3 框架开发升级的优化过程。通过前端框架升级，系统在组件化管理、性能优化、交互体验 等方面得到显著提升，使其更加适应现代地质建模的可视化需求。
+1、系统架构设计
+本系统采用 前后端分离 设计，结合 Vue 3 + Three.js + WebGL 进行三维可视化渲染，并通过后端 Node.js + Python（Flask/FastAPI） 提供数据处理及接口服务。系统整体架构如下：
+前端（Vue 3 + Three.js + WebGL）
+	•	采用 Vue 3 组件化开发，提升 UI 复用性与可维护性。
+	•	利用 WebGL 进行高效 三维地质可视化渲染。
+	•	采用 Zustand/Pinia 进行状态管理，实现数据共享。
+后端（Spring + Java）
+	•	负责地质数据的存储、处理及 API 提供。
+	•	通过 Java 进行坐标转换、Delaunay 三角剖分及地层建模 计算。
+
+```
+
+
+
 ```JS
 export function boxUvCom(ovDate,oNormal,max,min,size){
     //ovDate.count 点个数
