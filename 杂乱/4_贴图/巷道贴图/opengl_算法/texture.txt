@@ -1,0 +1,145 @@
+void COpenGL::DrawTriTexture(Triangle *p_T,bool *p_Visual,int TriNum, Vertex *p_V,float ObjectBox[],int TextureID,int TexDirection)
+（三角形集合，可视化，三角形个数，顶点集合，巷道的xyz的最大最小值，
+{               //draw tris with texture
+
+	if(!p_T||TriNum==0||p_Texture->p_Tex.empty()) return; 
+	  
+	glPushMatrix (); 
+
+	GLfloat Color[]={1,1,1,0.5};
+	CGLight p_Li;
+	p_Li.DisableLight();
+
+	glColor4f(1,1,1,0.5);
+	glLineWidth(1);
+
+	int t=0;   //find texture
+	int size=p_Texture->p_Tex.size();
+	for(int i=0;i<size;i++){
+		if(p_Texture->p_Tex[i]&&p_Texture->p_Tex[i]->TextureID==TextureID){
+			t=i;
+			break;
+		}
+	}
+	if(t>=size) return;
+	p_Texture->p_Tex[t]->SetTexture(1);
+
+	if(p_Texture->p_Tex[t]->m_Mode==2){  //replace/repeat
+		float xmin,xmax,ymin,ymax,zmin,zmax;
+		//xmax=m_ObjectBox[0],xmin=m_ObjectBox[1],ymax=m_ObjectBox[2],ymin=m_ObjectBox[3],zmax=m_ObjectBox[4],zmin=m_ObjectBox[5];  
+//using the 一致 box
+		xmax=ObjectBox[0],xmin=ObjectBox[1],ymax=ObjectBox[2],ymin=ObjectBox[3],zmax=ObjectBox[4],zmin=ObjectBox[5];  ////using the object itself
+		int m_Rep=p_Texture->m_NumRep; 
+		float m_texscale=p_Texture->m_TexScale; 
+	 
+		Vertex p[3];
+		float dx,dy,dz;
+		dx = xmax - xmin;
+		dy = ymax - ymin;
+		dz = zmax - zmin;
+			
+		for(int j=0;j<TriNum;j++){
+		    if(p_Visual&&!p_Visual[j]) continue;
+
+			glBegin(GL_TRIANGLES); 
+
+			p[0]=p_V[p_T[j].Point[0]];
+			p[1]=p_V[p_T[j].Point[1]];
+			p[2]=p_V[p_T[j].Point[2]];
+
+			if ( TexDirection == 1)//xy
+			{
+				if (dx > dy)
+				{					
+					glTexCoord2f(m_Rep * (p[0].x - xmin)/dx, (m_Rep / m_texscale)* (p[0].y - ymin)/dx);
+					WglVertex3f(p[0].x,p[0].y,p[0].z);				
+					glTexCoord2f(m_Rep * (p[1].x - xmin)/dx, (m_Rep / m_texscale)* (p[1].y - ymin)/dx);
+					WglVertex3f(p[1].x,p[1].y,p[1].z);
+					glTexCoord2f(m_Rep * (p[2].x - xmin)/dx, (m_Rep / m_texscale)* (p[2].y - ymin)/dx);
+					WglVertex3f(p[2].x,p[2].y,p[2].z);			
+				}else{
+					glTexCoord2f( (m_Rep * m_texscale)*(p[0].x - xmin)/dy, m_Rep * (p[0].y - ymin)/dy);
+					WglVertex3f(p[0].x,p[0].y,p[0].z);				
+					glTexCoord2f( (m_Rep * m_texscale)*(p[1].x - xmin)/dy, m_Rep * (p[1].y - ymin)/dy);
+					WglVertex3f(p[1].x,p[1].y,p[1].z);					
+					glTexCoord2f( (m_Rep * m_texscale)*(p[2].x - xmin)/dy, m_Rep * (p[2].y - ymin)/dy);
+					WglVertex3f(p[2].x,p[2].y,p[2].z);					
+				}
+			}
+
+			if ( TexDirection == 2)//yz
+			{
+				if (dz > dy)
+				{				
+					glTexCoord2f((m_Rep / m_texscale)* (p[0].y - ymin)/dz,m_Rep * (p[0].z - zmin)/dz);
+					WglVertex3f(p[0].x,p[0].y,p[0].z);
+					glTexCoord2f((m_Rep / m_texscale)* (p[1].y - ymin)/dz,m_Rep * (p[1].z - zmin)/dz);
+					WglVertex3f(p[1].x,p[1].y,p[1].z);						
+					glTexCoord2f((m_Rep / m_texscale)* (p[2].y - ymin)/dz,m_Rep * (p[2].z - zmin)/dz);
+					WglVertex3f(p[2].x,p[2].y,p[2].z);	
+				}else{
+					glTexCoord2f( m_Rep * (p[0].y - ymin)/dy,(m_Rep * m_texscale)*(p[0].z - zmin)/dy);
+					WglVertex3f(p[0].x,p[0].y,p[0].z);
+					glTexCoord2f( m_Rep * (p[1].y - ymin)/dy,(m_Rep * m_texscale)*(p[1].z - zmin)/dy);
+					WglVertex3f(p[1].x,p[1].y,p[1].z);				
+					glTexCoord2f( m_Rep * (p[2].y - ymin)/dy,(m_Rep * m_texscale)*(p[2].z - zmin)/dy);
+					WglVertex3f(p[2].x,p[2].y,p[2].z);
+					
+				}		
+			}
+
+			if ( TexDirection == 3)//xz
+			{
+				if (dx > dz)
+				{				
+					glTexCoord2f(m_Rep * (p[0].x - xmin)/dx, (m_Rep / m_texscale)* (p[0].z - zmin)/dx);
+					WglVertex3f(p[0].x,p[0].y,p[0].z);
+					glTexCoord2f(m_Rep * (p[1].x - xmin)/dx, (m_Rep / m_texscale)* (p[1].z - zmin)/dx);
+					WglVertex3f(p[1].x,p[1].y,p[1].z);					
+					glTexCoord2f(m_Rep * (p[2].x - xmin)/dx, (m_Rep / m_texscale)* (p[2].z - zmin)/dx);
+					WglVertex3f(p[2].x,p[2].y,p[2].z);
+				}else{
+					glTexCoord2f( (m_Rep * m_texscale)*(p[0].x - xmin)/dz, m_Rep * (p[0].z - zmin)/dz);
+					WglVertex3f(p[0].x,p[0].y,p[0].z);
+					glTexCoord2f( (m_Rep * m_texscale)*(p[1].x - xmin)/dz, m_Rep * (p[1].z - zmin)/dz);
+					WglVertex3f(p[1].x,p[1].y,p[1].z);						
+					glTexCoord2f( (m_Rep * m_texscale)*(p[2].x - xmin)/dz, m_Rep * (p[2].z - zmin)/dz);
+					WglVertex3f(p[2].x,p[2].y,p[2].z);						
+				}		
+			}
+		
+	        glEnd();
+
+	    } //forend
+	}
+
+ 
+	if(p_Texture->p_Tex[t]->m_Mode==1){   //1 to 1 
+		CFunction m_Fun;
+		GLfloat ts=0.0f, te=1.0f;
+		GLfloat maxX=ObjectBox[0],minX=ObjectBox[1],maxY=ObjectBox[2],minY=ObjectBox[3],maxZ=ObjectBox[4],minZ=ObjectBox[5]; //using the object itself
+        Vertex p[3];
+
+		for (int j = 0; j < TriNum; j++){
+			if(p_Visual&&!p_Visual[j]) continue;
+	        
+			p[0]=p_V[p_T[j].Point[0]];
+			p[1]=p_V[p_T[j].Point[1]];
+			p[2]=p_V[p_T[j].Point[2]];
+		
+			glBegin(GL_TRIANGLES); 
+				glTexCoord2f (m_Fun.Standary(minX,maxX,p[0].x,ts,te),m_Fun.Standary(minY,maxY,p[0].y,ts,te));
+				WglVertex3f(p[0].x,p[0].y,p[0].z);
+			    glTexCoord2f (m_Fun.Standary(minX,maxX,p[1].x,ts,te),m_Fun.Standary(minY,maxY,p[1].y,ts,te));
+				WglVertex3f(p[1].x,p[1].y,p[1].z);
+				glTexCoord2f (m_Fun.Standary(minX,maxX,p[2].x,ts,te),m_Fun.Standary(minY,maxY,p[2].y,ts,te)); 
+				WglVertex3f(p[2].x,p[2].y,p[2].z);			
+			glEnd();
+		}
+	}
+  
+    p_Texture->p_Tex[t]->DisTexture();
+	 
+	glPopMatrix (); 
+
+}
